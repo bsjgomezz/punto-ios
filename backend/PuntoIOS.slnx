@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PuntoIOS.Api/PuntoIOS.Api.csproj" />
+    <Project Path="src/PuntoIOS.Application/PuntoIOS.Application.csproj" />
+    <Project Path="src/PuntoIOS.Domain/PuntoIOS.Domain.csproj" />
+    <Project Path="src/PuntoIOS.Infrastructure/PuntoIOS.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PuntoIOS.ArchitectureTests/PuntoIOS.ArchitectureTests.csproj" />
+    <Project Path="tests/PuntoIOS.IntegrationTests/PuntoIOS.IntegrationTests.csproj" />
+    <Project Path="tests/PuntoIOS.UnitTests/PuntoIOS.UnitTests.csproj" />
+  </Folder>
+</Solution>

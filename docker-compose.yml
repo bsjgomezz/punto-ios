@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: puntoios-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-puntoios}
+      POSTGRES_USER: ${POSTGRES_USER:-puntoios}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Definí POSTGRES_PASSWORD en .env}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - puntoios-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-puntoios} -d ${POSTGRES_DB:-puntoios}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  puntoios-pgdata:

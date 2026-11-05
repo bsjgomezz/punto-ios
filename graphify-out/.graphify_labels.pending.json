@@ -1,0 +1,23 @@
+{
+  "0": "Punto iOS — Software Design Document (SDD)",
+  "1": "PuntoIOS.ArchitectureTests.csproj",
+  "2": "3. Fases",
+  "3": "0001-decisiones-iniciales.md",
+  "4": "package.json",
+  "5": "Fact",
+  "6": "use-remote-checks.ts",
+  "7": "PageRequest",
+  "8": "Instrucciones para Codex / Claude Code — Punto iOS",
+  "9": "Punto iOS",
+  "10": "PostgresReadyCheck",
+  "11": "postgres",
+  "12": "CLAUDE.md",
+  "13": "compilerOptions",
+  "14": "http",
+  "15": "scripts",
+  "16": "layout.tsx",
+  "17": "PuntoIOS.Application/AssemblyMarker.cs",
+  "18": "PuntoIOS.Domain/AssemblyMarker.cs",
+  "19": "PuntoIOS.Infrastructure/AssemblyMarker.cs",
+  "21": "fase1-scaffold.ps1"
+}

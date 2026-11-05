@@ -1,0 +1,220 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #15121c;
+  --surface: #1e1a28;
+  --line: #382f4a;
+  --text: #efeaf8;
+  --muted: #aaa2c0;
+  --violet: #a07bff;
+  --violet-strong: #7c4dff;
+  --ok: #62dba8;
+  --bad: #ff8594;
+  --focus: #c9b5ff;
+  color-scheme: dark;
+}
+
+html {
+  background: var(--bg);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-figtree), system-ui, sans-serif;
+  line-height: 1.55;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 0.35rem;
+}
+
+.shell {
+  width: min(100% - 2rem, 46rem);
+  margin-inline: auto;
+  padding-block: clamp(2rem, 7vw, 5rem) 4rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.brand-mark {
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 50%;
+  background: var(--violet-strong);
+  box-shadow: 0 0 0 4px rgb(124 77 255 / 0.22);
+}
+
+.hero-title {
+  margin: 2.5rem 0 1rem;
+  font-family: var(--font-bricolage), system-ui, sans-serif;
+  font-size: clamp(3.25rem, 11vw, 6.5rem);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.035em;
+}
+
+.hero-lead {
+  max-width: 34ch;
+  margin: 0;
+  color: var(--muted);
+  font-size: clamp(1.1rem, 2.4vw, 1.35rem);
+}
+
+.board {
+  margin-top: 3.5rem;
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.board-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.board-title {
+  margin: 0;
+  font-family: var(--font-bricolage), system-ui, sans-serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--violet-strong);
+  border-radius: 0.55rem;
+  background: var(--violet-strong);
+  color: #fff;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) {
+  background: #6b3ff0;
+}
+
+.btn:disabled {
+  border-color: var(--line);
+  background: transparent;
+  color: var(--muted);
+  cursor: progress;
+}
+
+.checks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.check {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.35rem 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.check:last-child {
+  border-bottom: 0;
+}
+
+.lamp {
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.lamp[data-state="ok"] {
+  background: var(--ok);
+  box-shadow: 0 0 0 4px rgb(98 219 168 / 0.16);
+}
+
+.lamp[data-state="error"] {
+  background: var(--bad);
+  box-shadow: 0 0 0 4px rgb(255 133 148 / 0.16);
+}
+
+.lamp[data-state="checking"] {
+  background: var(--violet);
+  animation: lamp-pulse 1.2s ease-in-out infinite;
+}
+
+.check-name {
+  margin: 0;
+  font-weight: 600;
+}
+
+.check-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.check-status {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: right;
+}
+
+.check-status[data-state="ok"] {
+  color: var(--ok);
+}
+
+.check-status[data-state="error"] {
+  color: var(--bad);
+}
+
+.check-status[data-state="checking"] {
+  color: var(--muted);
+}
+
+.check-help {
+  grid-column: 2 / -1;
+  margin: 0.4rem 0 0;
+  padding: 0.6rem 0.8rem;
+  border-left: 3px solid var(--bad);
+  border-radius: 0.35rem;
+  background: rgb(255 133 148 / 0.08);
+  font-size: 0.92rem;
+}
+
+.footnote {
+  max-width: 52ch;
+  margin: 1.5rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+@keyframes lamp-pulse {
+  50% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lamp[data-state="checking"] {
+    animation: none;
+  }
+}

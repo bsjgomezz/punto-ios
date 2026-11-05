@@ -1,0 +1,7 @@
+_to_delete/
+graphify-out/
+.git/
+node_modules/
+bin/
+obj/
+.next/

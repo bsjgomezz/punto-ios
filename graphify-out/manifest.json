@@ -18,15 +18,15 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1793847257.2906098,
-    "seen": 1793847261.5271084,
-    "ast_hash": "ae15a5ee91ffd092b8e09e1cafbfe83d",
+    "mtime": 1793848775.9684978,
+    "seen": 1793850491.7950027,
+    "ast_hash": "5bb2bd5faa99ecda74d6e3dad9818cf6",
     "semantic_hash": ""
   },
   "docs/ROADMAP.md": {
-    "mtime": 1793845236.0535464,
-    "seen": 1793845236.8853095,
-    "ast_hash": "2fd5b3a04eba7fb28e0052d40f03ac25",
+    "mtime": 1793848775.9637358,
+    "seen": 1793850491.795005,
+    "ast_hash": "c5a33dfaeff80be0ffdc92cb771a4d06",
     "semantic_hash": ""
   },
   "docs/SDD.md": {
@@ -60,9 +60,9 @@
     "semantic_hash": ""
   },
   "backend/src/PuntoIOS.Api/Program.cs": {
-    "mtime": 1793847203.5864186,
-    "seen": 1793847261.5270605,
-    "ast_hash": "24d6a33de5d309549db1cae934eaace8",
+    "mtime": 1793851400.0236483,
+    "seen": 1793851418.7444158,
+    "ast_hash": "8178b240574caa4f59a373a5f1af9f63",
     "semantic_hash": ""
   },
   "backend/src/PuntoIOS.Api/Properties/launchSettings.json": {
@@ -78,15 +78,15 @@
     "semantic_hash": ""
   },
   "backend/src/PuntoIOS.Api/appsettings.Development.json": {
-    "mtime": 1793847203.6077461,
-    "seen": 1793847261.527064,
-    "ast_hash": "dc4447dabd5b8acd92fce9dd72944434",
+    "mtime": 1793851400.054644,
+    "seen": 1793851418.7444198,
+    "ast_hash": "22ea324bca9a4d314eeb7e6b5b7ddf67",
     "semantic_hash": ""
   },
   "backend/src/PuntoIOS.Api/appsettings.json": {
-    "mtime": 1793846575.0379717,
-    "seen": 1793847261.527065,
-    "ast_hash": "f7e65dde4e5533740a0d57ac9355c0e8",
+    "mtime": 1793851400.0648828,
+    "seen": 1793851418.7444208,
+    "ast_hash": "0fd26c84dfe30f028c4efb8b9d01f1c8",
     "semantic_hash": ""
   },
   "backend/src/PuntoIOS.Application/AssemblyMarker.cs": {
@@ -210,9 +210,9 @@
     "semantic_hash": ""
   },
   "frontend/package.json": {
-    "mtime": 1793847932.7507894,
-    "seen": 1793847998.4899397,
-    "ast_hash": "7c0fa39c82925911af31c312a8cedb18",
+    "mtime": 1793850606.3049583,
+    "seen": 1793851106.0525465,
+    "ast_hash": "b5a6bc37d431fd03b42739b7df007e12",
     "semantic_hash": ""
   },
   "frontend/playwright.config.ts": {
@@ -222,15 +222,15 @@
     "semantic_hash": ""
   },
   "frontend/src/app/layout.tsx": {
-    "mtime": 1793847246.4923632,
-    "seen": 1793847261.52709,
-    "ast_hash": "a20437a3897b9c6c828f0c8a6c6f9342",
+    "mtime": 1793850462.1742747,
+    "seen": 1793850491.7949753,
+    "ast_hash": "80ea5439461436f6de49da4dd5706580",
     "semantic_hash": ""
   },
   "frontend/src/app/page.tsx": {
-    "mtime": 1793847246.500412,
-    "seen": 1793847261.5270913,
-    "ast_hash": "065205af504daeb5e2237efa8e08843f",
+    "mtime": 1793850462.2088091,
+    "seen": 1793850491.7949765,
+    "ast_hash": "b051ec95e7ede8cc9667efeafc3a1ca0",
     "semantic_hash": ""
   },
   "frontend/src/features/sistema/checks.ts": {
@@ -299,10 +299,154 @@
     "ast_hash": "1c563f7729df75c37052faed04fd1e46",
     "semantic_hash": ""
   },
+  "frontend/e2e/acceso.spec.ts": {
+    "mtime": 1793850773.7050066,
+    "seen": 1793851106.0525413,
+    "ast_hash": "b588a0d634226955982a08892f0e147b",
+    "semantic_hash": ""
+  },
+  "frontend/src/app/ingresar/page.tsx": {
+    "mtime": 1793850462.077149,
+    "seen": 1793850491.7949739,
+    "ast_hash": "ab4ae18a154b824faaae1125eaff9889",
+    "semantic_hash": ""
+  },
+  "frontend/src/app/panel/page.tsx": {
+    "mtime": 1793851414.6309931,
+    "seen": 1793851418.7444904,
+    "ast_hash": "437fad7e4de29a01b7e49b23fad08643",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/auth/auth-errors.test.ts": {
+    "mtime": 1793850508.077968,
+    "seen": 1793850511.3449357,
+    "ast_hash": "41d904d3565950408300be81266fd81d",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/auth/auth-errors.ts": {
+    "mtime": 1793850508.0599327,
+    "seen": 1793850511.3449368,
+    "ast_hash": "80cf77df0f9e83f81e3f7fa1e13f872d",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/auth/auth-provider.tsx": {
+    "mtime": 1793851101.5335135,
+    "seen": 1793851106.052556,
+    "ast_hash": "c7c5022b910c2e919847bbbd3265ec60",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/auth/login-form.test.tsx": {
+    "mtime": 1793851101.680492,
+    "seen": 1793851106.0525572,
+    "ast_hash": "c3df33f6a3d80b8b3556e63610779f25",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/auth/login-form.tsx": {
+    "mtime": 1793851101.5451634,
+    "seen": 1793851106.0525587,
+    "ast_hash": "8178171ad6a26876c8139c911388f358",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/auth/require-auth.test.tsx": {
+    "mtime": 1793850484.768836,
+    "seen": 1793850491.7949834,
+    "ast_hash": "93181c33ebc742329f35bb3296541d3e",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/auth/require-auth.tsx": {
+    "mtime": 1793850461.955836,
+    "seen": 1793850491.7949843,
+    "ast_hash": "e23a052a8204dacf73edce88284683b4",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/auth/session-bar.tsx": {
+    "mtime": 1793850462.040965,
+    "seen": 1793850491.7949855,
+    "ast_hash": "c0e08ac9aa3f1c28dab8b01d90024e19",
+    "semantic_hash": ""
+  },
+  "frontend/src/lib/firebase/client.ts": {
+    "mtime": 1793850461.8343709,
+    "seen": 1793850491.7949946,
+    "ast_hash": "686aee195b71fc6665380723eaade9c6",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/auth/remembered-email.ts": {
+    "mtime": 1793851101.4603655,
+    "seen": 1793851106.0525603,
+    "ast_hash": "d1b47949e6f340e56443e225e5a69584",
+    "semantic_hash": ""
+  },
+  "backend/src/PuntoIOS.Api/Authentication/HttpContextCurrentUserAccessor.cs": {
+    "mtime": 1793851400.0114994,
+    "seen": 1793851418.74441,
+    "ast_hash": "ff2e6e3929d1984f0ff54e36ebd56826",
+    "semantic_hash": ""
+  },
+  "backend/src/PuntoIOS.Api/Controllers/MeController.cs": {
+    "mtime": 1793851400.0175893,
+    "seen": 1793851418.7444131,
+    "ast_hash": "c4567bc5b6557f00183de595276b6340",
+    "semantic_hash": ""
+  },
+  "backend/src/PuntoIOS.Application/Common/Security/CurrentUser.cs": {
+    "mtime": 1793851399.975099,
+    "seen": 1793851418.7444263,
+    "ast_hash": "4eb370081dff832a5866f398eb536bdd",
+    "semantic_hash": ""
+  },
+  "backend/src/PuntoIOS.Application/Common/Security/ICurrentUserAccessor.cs": {
+    "mtime": 1793851399.9872944,
+    "seen": 1793851418.7444274,
+    "ast_hash": "3b1ff424453b38a4497d381bfd5db1d9",
+    "semantic_hash": ""
+  },
+  "backend/src/PuntoIOS.Application/Features/Identidad/ObtenerUsuarioActual/ObtenerUsuarioActualHandler.cs": {
+    "mtime": 1793851400.0054605,
+    "seen": 1793851418.7444286,
+    "ast_hash": "107882e89570e8cabb6d7ddf1f2dc9de",
+    "semantic_hash": ""
+  },
+  "backend/src/PuntoIOS.Application/Features/Identidad/ObtenerUsuarioActual/UsuarioActualDto.cs": {
+    "mtime": 1793851399.9933212,
+    "seen": 1793851418.7444518,
+    "ast_hash": "7631f1293e70a6476cf489e1ad50613b",
+    "semantic_hash": ""
+  },
+  "backend/tests/PuntoIOS.IntegrationTests/MeEndpointTests.cs": {
+    "mtime": 1793851400.1023223,
+    "seen": 1793851418.744468,
+    "ast_hash": "47fa06da8782d2a2c391e2bae5a9cbf9",
+    "semantic_hash": ""
+  },
+  "backend/tests/PuntoIOS.UnitTests/ObtenerUsuarioActualHandlerTests.cs": {
+    "mtime": 1793851400.0964942,
+    "seen": 1793851418.7444723,
+    "ast_hash": "a4741fe54340f2bbd41f5b35c90cb70b",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/auth/server-identity.test.tsx": {
+    "mtime": 1793851414.5939412,
+    "seen": 1793851418.7445016,
+    "ast_hash": "2ec0e655a7b6456d18164c465ece51d9",
+    "semantic_hash": ""
+  },
+  "frontend/src/features/auth/server-identity.tsx": {
+    "mtime": 1793851414.5909748,
+    "seen": 1793851418.7445025,
+    "ast_hash": "1e3315edae7a374506b6902726884d93",
+    "semantic_hash": ""
+  },
+  "frontend/src/lib/api/client.ts": {
+    "mtime": 1793851414.5820384,
+    "seen": 1793851418.7445095,
+    "ast_hash": "fbbc58a2ba8b198927dcd4e33b57e0d1",
+    "semantic_hash": ""
+  },
   "frontend/package-lock.json": {
-    "mtime": 1793847932.8288634,
-    "seen": 1793847998.4899645,
-    "ast_hash": "618198ba35e84f6b0e695f89aad0901b",
+    "mtime": 1793850606.4152305,
+    "seen": 1793851106.0525868,
+    "ast_hash": "78221866e63e6cab59210159d67653a7",
     "semantic_hash": ""
   }
 }

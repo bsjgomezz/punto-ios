@@ -10,7 +10,7 @@ Stack: Next.js + React + TypeScript (frontend), C# ASP.NET Core (backend, arquit
 - `AGENTS.md` — reglas para Codex / Claude Code.
 
 ## Estado
-**Fase 1 (cimientos).** Hay health check del backend, página inicial que consulta su estado y pruebas base. Sin autenticación ni lógica de negocio todavía.
+**Fase 1 (cimientos) completada.** Health check del backend, página inicial que consulta su estado y pruebas base. Siguiente: Fase 2 (autenticación con Firebase y permisos).
 
 ## Requisitos
 .NET SDK 10, Node 24 + npm, Docker Desktop (abierto).

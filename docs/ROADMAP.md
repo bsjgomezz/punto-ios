@@ -15,9 +15,13 @@ No se avanza con errores críticos pendientes. Cada fase termina con: código co
 
 ## 3. Fases
 
-### Fase 1 — Inspección y cimientos (Fase 0 del repositorio)
+### Fase 1 — Inspección y cimientos (Fase 0 del repositorio) ✅ COMPLETADA (2026-11-05)
 Backend ASP.NET Core con solución por capas, frontend Next.js (TS estricto), PostgreSQL con Docker Compose, `.env.example`, health check (`/health`, `/health/ready`), página inicial, pruebas mínimas (xUnit, arquitectura, Playwright smoke), README, ADR-0001, CI inicial (GitHub Actions) si aplica.
 **Aceptación:** backend y frontend corren en local, PostgreSQL disponible, build y pruebas base pasan. *No incluye Firebase ni lógica de negocio.*
+
+**Resultado verificado:** `dotnet build` y `dotnet test` (24/24), `npm run lint`, `typecheck`, `npm test` (7/7), `npm run test:e2e` (4/4, escritorio y celular) y `npm run build` OK. Verificación manual: las 4 luces de estado en verde, y la base se detecta al apagarla/prenderla. Commit `c3e136d`.
+
+**Pendiente de la fase (diferido):** CI con GitHub Actions (requiere repositorio remoto).
 
 ### Fase 2 — Autenticación y permisos
 - S1 Login/logout Firebase en frontend, rutas protegidas.

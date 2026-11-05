@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { StatusBoard } from "@/features/sistema/status-board";
 
 export default function Home() {
@@ -10,6 +11,11 @@ export default function Home() {
       <h1 className="hero-title">Punto iOS</h1>
       <p className="hero-lead">
         Reparaciones, ventas, stock y caja del local, en un solo lugar.
+      </p>
+      <p className="hero-actions">
+        <Link className="btn" href="/ingresar">
+          Ingresar
+        </Link>
       </p>
 
       <StatusBoard />

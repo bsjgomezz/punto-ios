@@ -218,3 +218,143 @@ body {
     animation: none;
   }
 }
+
+/* ---------- acceso ---------- */
+a.btn {
+  display: inline-block;
+  text-decoration: none;
+}
+
+.btn-quiet {
+  border-color: var(--line);
+  background: transparent;
+  color: var(--text);
+}
+
+.btn-quiet:hover:not(:disabled) {
+  background: var(--surface);
+}
+
+.hero-actions {
+  margin: 1.5rem 0 0;
+}
+
+.shell-narrow {
+  width: min(100% - 2rem, 28rem);
+}
+
+.page-title {
+  margin: 2rem 0 0.75rem;
+  font-family: var(--font-bricolage), system-ui, sans-serif;
+  font-size: clamp(2.25rem, 8vw, 3.25rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.form {
+  display: grid;
+  gap: 1.1rem;
+  padding: 1.5rem 1.25rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.field label {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.field input {
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 0.55rem;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+.field input:focus-visible {
+  outline-offset: 1px;
+}
+
+.form-error {
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  border-left: 3px solid var(--bad);
+  border-radius: 0.35rem;
+  background: rgb(255 133 148 / 0.08);
+  font-size: 0.92rem;
+}
+
+.footnote a {
+  color: var(--violet);
+}
+
+.gate-message {
+  padding: 4rem 1rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+.panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.session-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.session-email {
+  color: var(--muted);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.form-divider {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.remember {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.remember input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--violet-strong);
+}
+
+.identity {
+  margin: 2rem 0 0;
+  padding: 0.7rem 0.9rem;
+  border-left: 3px solid var(--muted);
+  border-radius: 0.35rem;
+  background: var(--surface);
+  font-size: 0.95rem;
+}
+
+.identity[data-state="ok"] {
+  border-left-color: var(--ok);
+}
+
+.identity[data-state="rejected"],
+.identity[data-state="unreachable"] {
+  border-left-color: var(--bad);
+}

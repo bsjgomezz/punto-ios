@@ -1,5 +1,5 @@
-using System.Net.Mail;
 using PuntoIOS.Application.Common.Results;
+using PuntoIOS.Application.Common.Validation;
 using PuntoIOS.Application.Features.Identidad.Puertos;
 using PuntoIOS.Domain.Identidad;
 
@@ -13,7 +13,7 @@ public sealed class RegistrarUsuarioHandler(IUsuarioRepositorio usuarios, IRolRe
     public async Task<Resultado<UsuarioDto>> HandleAsync(RegistrarUsuarioCommand comando, CancellationToken ct)
     {
         var email = Usuario.NormalizarEmail(comando.Email);
-        if (!EsEmailValido(email))
+        if (!EmailValidator.EsValido(email))
         {
             return Resultado<UsuarioDto>.Falla(TipoError.Validacion, "email_invalido", "El email no es válido.");
         }
@@ -39,23 +39,5 @@ public sealed class RegistrarUsuarioHandler(IUsuarioRepositorio usuarios, IRolRe
         await usuarios.GuardarCambiosAsync(ct);
 
         return Resultado<UsuarioDto>.Ok(UsuarioDto.Desde(usuario));
-    }
-
-    private static bool EsEmailValido(string email)
-    {
-        if (email.Length is 0 or > 254)
-        {
-            return false;
-        }
-
-        try
-        {
-            var direccion = new MailAddress(email);
-            return direccion.Address == email;
-        }
-        catch (FormatException)
-        {
-            return false;
-        }
     }
 }

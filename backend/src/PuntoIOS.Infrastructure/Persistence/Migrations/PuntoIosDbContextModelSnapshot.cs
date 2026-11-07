@@ -22,6 +22,72 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("PuntoIOS.Domain.Clientes.Cliente", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Apellido")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("apellido");
+
+                    b.Property<DateTimeOffset>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<Guid?>("CreadoPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("creado_por_usuario_id");
+
+                    b.Property<string>("Direccion")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("direccion");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("email");
+
+                    b.Property<Guid>("LocalId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("local_id");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("nombre");
+
+                    b.Property<string>("Observaciones")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("observaciones");
+
+                    b.Property<string>("Telefono")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("telefono");
+
+                    b.Property<string>("TelefonoNormalizado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("telefono_normalizado");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LocalId", "TelefonoNormalizado");
+
+                    b.HasIndex("LocalId", "Apellido", "Nombre");
+
+                    b.ToTable("clientes", (string)null);
+                });
+
             modelBuilder.Entity("PuntoIOS.Domain.Identidad.Permiso", b =>
                 {
                     b.Property<string>("Codigo")
@@ -54,6 +120,16 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         {
                             Codigo = "roles.ver",
                             Descripcion = "Ver roles y sus permisos"
+                        },
+                        new
+                        {
+                            Codigo = "clientes.ver",
+                            Descripcion = "Ver y buscar clientes"
+                        },
+                        new
+                        {
+                            Codigo = "clientes.crear",
+                            Descripcion = "Registrar clientes nuevos"
                         });
                 });
 
@@ -142,6 +218,31 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         {
                             RolId = new Guid("0195a000-0000-7000-8000-000000000001"),
                             PermisoCodigo = "roles.ver"
+                        },
+                        new
+                        {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000001"),
+                            PermisoCodigo = "clientes.ver"
+                        },
+                        new
+                        {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000001"),
+                            PermisoCodigo = "clientes.crear"
+                        },
+                        new
+                        {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000002"),
+                            PermisoCodigo = "clientes.ver"
+                        },
+                        new
+                        {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000002"),
+                            PermisoCodigo = "clientes.crear"
+                        },
+                        new
+                        {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000003"),
+                            PermisoCodigo = "clientes.ver"
                         });
                 });
 
@@ -195,6 +296,39 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                     b.HasIndex("RolId");
 
                     b.ToTable("usuarios", (string)null);
+                });
+
+            modelBuilder.Entity("PuntoIOS.Domain.Locales.Local", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("nombre");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("locales", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("0195a000-0000-7000-8000-0000000000a1"),
+                            Nombre = "Punto iOS"
+                        });
+                });
+
+            modelBuilder.Entity("PuntoIOS.Domain.Clientes.Cliente", b =>
+                {
+                    b.HasOne("PuntoIOS.Domain.Locales.Local", null)
+                        .WithMany()
+                        .HasForeignKey("LocalId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("PuntoIOS.Domain.Identidad.RolPermiso", b =>

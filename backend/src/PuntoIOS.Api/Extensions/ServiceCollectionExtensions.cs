@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using PuntoIOS.Api.Authentication;
 using PuntoIOS.Application.Common.Security;
+using PuntoIOS.Application.Features.Clientes.BuscarClientes;
+using PuntoIOS.Application.Features.Clientes.CrearCliente;
+using PuntoIOS.Application.Features.Clientes.ObtenerCliente;
 using PuntoIOS.Application.Features.Identidad.ActualizarUsuario;
 using PuntoIOS.Application.Features.Identidad.IdentificarUsuario;
 using PuntoIOS.Application.Features.Identidad.ListarRoles;
@@ -24,6 +27,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ListarRolesHandler>();
         services.AddScoped<RegistrarUsuarioHandler>();
         services.AddScoped<ActualizarUsuarioHandler>();
+        services.AddScoped<CrearClienteHandler>();
+        services.AddScoped<BuscarClientesHandler>();
+        services.AddScoped<ObtenerClienteHandler>();
         return services;
     }
 

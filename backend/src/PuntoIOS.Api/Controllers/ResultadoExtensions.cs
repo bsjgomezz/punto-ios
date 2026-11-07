@@ -17,6 +17,11 @@ public static class ResultadoExtensions
 
         var problem = new ProblemDetails { Status = status, Title = error.Mensaje };
         problem.Extensions["codigo"] = error.Codigo;
+        foreach (var (clave, valor) in error.Datos ?? new Dictionary<string, object?>())
+        {
+            problem.Extensions[clave] = valor;
+        }
+
         return new ObjectResult(problem) { StatusCode = status };
     }
 }

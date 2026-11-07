@@ -20,7 +20,10 @@ public class UsuariosEndpointTests(PostgresFixture postgres) : IClassFixture<Pos
         string[] esperados = [RolesDeSistema.Administrador, RolesDeSistema.RecepcionVentas, RolesDeSistema.Tecnico];
         Assert.Equal(esperados.Order(StringComparer.Ordinal), roles.Select(r => r.Nombre).Order(StringComparer.Ordinal));
         Assert.Equal(Permisos.Catalogo.Count, roles.Single(r => r.Id == RolesDeSistema.AdministradorId).Permisos.Count);
-        Assert.Empty(roles.Single(r => r.Id == RolesDeSistema.TecnicoId).Permisos);
+        Assert.Equal([Permisos.ClientesVer], roles.Single(r => r.Id == RolesDeSistema.TecnicoId).Permisos);
+        Assert.Equal(
+            [Permisos.ClientesCrear, Permisos.ClientesVer],
+            roles.Single(r => r.Id == RolesDeSistema.RecepcionVentasId).Permisos);
     }
 
     [Fact]

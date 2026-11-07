@@ -49,8 +49,14 @@ internal sealed class RolPermisoConfiguration : IEntityTypeConfiguration<RolPerm
         builder.Property(rp => rp.PermisoCodigo).HasColumnName("permiso_codigo").HasMaxLength(100);
         builder.HasOne<Permiso>().WithMany().HasForeignKey(rp => rp.PermisoCodigo).OnDelete(DeleteBehavior.Restrict);
 
-        // El Administrador tiene todos los permisos del catálogo; los otros roles no tienen ninguno todavía.
-        builder.HasData(Permisos.Catalogo.Keys.Select(c => new RolPermiso(RolesDeSistema.AdministradorId, c)));
+        // Permisos iniciales por rol (editables luego). El Administrador tiene todo el catálogo.
+        var recepcion = new[] { Permisos.ClientesVer, Permisos.ClientesCrear };
+        var tecnico = new[] { Permisos.ClientesVer };
+
+        builder.HasData(
+            Permisos.Catalogo.Keys.Select(c => new RolPermiso(RolesDeSistema.AdministradorId, c))
+                .Concat(recepcion.Select(c => new RolPermiso(RolesDeSistema.RecepcionVentasId, c)))
+                .Concat(tecnico.Select(c => new RolPermiso(RolesDeSistema.TecnicoId, c))));
     }
 }
 

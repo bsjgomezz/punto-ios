@@ -15,6 +15,6 @@ internal sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<P
             .UseNpgsql(connectionString)
             .Options;
 
-        return new PuntoIosDbContext(options);
+        return new PuntoIosDbContext(options, new LocalUnico());
     }
 }

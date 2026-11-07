@@ -7,7 +7,12 @@ public enum TipoError
     Conflicto,
 }
 
-public sealed record Error(TipoError Tipo, string Codigo, string Mensaje);
+/// <summary>Error de negocio. <c>Datos</c> agrega información útil para quien consume la API (p. ej. coincidencias).</summary>
+public sealed record Error(
+    TipoError Tipo,
+    string Codigo,
+    string Mensaje,
+    IReadOnlyDictionary<string, object?>? Datos = null);
 
 /// <summary>Resultado de un caso de uso: un valor o un error de negocio (sin usar excepciones para el flujo normal).</summary>
 public sealed class Resultado<T>

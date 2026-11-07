@@ -3,16 +3,8 @@
 import { useEffect, useState } from "react";
 import { ApiError, apiGet } from "@/lib/api/client";
 import { useAuth } from "./auth-provider";
+import type { UsuarioActual } from "./use-me";
 
-type UsuarioActual = {
-  uid: string;
-  email: string | null;
-  emailVerificado: boolean;
-  nombre: string | null;
-  usuarioId: string | null;
-  rol: string | null;
-  permisos: string[];
-};
 
 type State =
   | { kind: "checking" }

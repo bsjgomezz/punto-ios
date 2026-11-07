@@ -31,8 +31,8 @@ Backend ASP.NET Core con solución por capas, frontend Next.js (TS estricto), Po
 **Aceptación:** el usuario inicia sesión y accede solo a lo que su rol permite.
 
 ### Fase 3 — Clientes y dispositivos
-- S4 Crear/buscar cliente (nombre, apellido, teléfono obligatorios; email, dirección, observaciones opcionales; duplicados por teléfono).
-- S5 Listado paginado, filtros, detalle y edición con historial.
+- S4 Crear/buscar cliente (nombre, apellido, teléfono obligatorios; email, dirección, observaciones opcionales; duplicados por teléfono). ✅ *(backend 99/99, frontend 43/43; verificado a mano)*
+- S5 Listado paginado, filtros, detalle y edición con historial. ✅ *(tabla `auditoria` con cambios campo a campo y quién/cuándo; permiso `clientes.editar` para Administrador y Recepción. Backend 114/114, frontend 48/48; verificado a mano. Pendiente: búsqueda sin distinguir acentos, control de concurrencia en ediciones simultáneas)*
 - S6 Dispositivos del cliente (marca, modelo, almacenamiento, color, IMEI/serie protegido).
 - S7 Código de seguimiento seguro por cliente (generación, regeneración).
 **Aceptación:** gestionar clientes y dispositivos sin perder historial.

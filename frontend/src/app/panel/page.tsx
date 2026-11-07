@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { RequireAuth } from "@/features/auth/require-auth";
 import { ServerIdentity } from "@/features/auth/server-identity";
 import { SessionBar } from "@/features/auth/session-bar";
@@ -18,6 +19,13 @@ export default function PanelPage() {
         <p className="hero-lead">
           Todavía no hay datos. Los clientes y las reparaciones se van a gestionar desde acá.
         </p>
+
+        <nav className="panel-nav" aria-label="Secciones">
+          <Link href="/clientes" className="panel-link">
+            <span className="panel-link-name">Clientes</span>
+            <span className="panel-link-hint">Buscar y registrar clientes</span>
+          </Link>
+        </nav>
 
         <ServerIdentity />
       </main>

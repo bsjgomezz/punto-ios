@@ -1,87 +1,21 @@
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Security.Cryptography;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.IdentityModel.JsonWebTokens;
-using Microsoft.IdentityModel.Protocols;
-using Microsoft.IdentityModel.Protocols.OpenIdConnect;
-using Microsoft.IdentityModel.Tokens;
 using PuntoIOS.Application.Features.Identidad.ObtenerUsuarioActual;
+using PuntoIOS.Domain.Identidad;
 
 namespace PuntoIOS.IntegrationTests;
 
-/// <summary>
-/// Verifica la validación del Firebase ID Token. Se firma con una clave de prueba y se
-/// reemplaza la descarga de claves de Google, así la prueba no depende de internet.
-/// </summary>
-public class MeEndpointTests
+/// <summary>Verifica la validación del Firebase ID Token y la identificación del usuario local.</summary>
+public class MeEndpointTests(PostgresFixture postgres) : IClassFixture<PostgresFixture>
 {
-    private const string ProjectId = "proyecto-test";
-    private static readonly SymmetricSecurityKey TestKey = new(RandomNumberGenerator.GetBytes(32));
-
-    private static HttpClient CreateClient(string? bearerToken = null)
-    {
-        var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
-        {
-            builder.UseEnvironment("Testing");
-            builder.ConfigureAppConfiguration((_, config) =>
-                config.AddInMemoryCollection(new Dictionary<string, string?> { ["Firebase:ProjectId"] = ProjectId }));
-            builder.ConfigureTestServices(services =>
-                services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
-                {
-                    options.ConfigurationManager =
-                        new StaticConfigurationManager<OpenIdConnectConfiguration>(new OpenIdConnectConfiguration());
-                    options.TokenValidationParameters.IssuerSigningKey = TestKey;
-                }));
-        });
-
-        var client = factory.CreateClient();
-        if (bearerToken is not null)
-        {
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
-        }
-
-        return client;
-    }
-
-    private static string CreateToken(
-        string project = ProjectId,
-        SecurityKey? key = null,
-        TimeSpan? lifetime = null)
-    {
-        var now = DateTime.UtcNow;
-        var expires = now.Add(lifetime ?? TimeSpan.FromHours(1));
-        var descriptor = new SecurityTokenDescriptor
-        {
-            Issuer = $"https://securetoken.google.com/{project}",
-            Audience = project,
-            NotBefore = expires < now ? expires.AddHours(-1) : now.AddMinutes(-1),
-            Expires = expires,
-            Claims = new Dictionary<string, object>
-            {
-                ["sub"] = "uid-123",
-                ["email"] = "dueno@puntoios.com",
-                ["email_verified"] = true,
-                ["name"] = "Dueño",
-            },
-            SigningCredentials = new SigningCredentials(key ?? TestKey, SecurityAlgorithms.HmacSha256),
-        };
-
-        return new JsonWebTokenHandler().CreateToken(descriptor);
-    }
+    private const string Ruta = "/api/v1/me";
 
     [Fact]
     public async Task Sin_token_responde_401()
     {
-        using var client = CreateClient();
+        using var api = await TestApi.CrearAsync(postgres);
 
-        var response = await client.GetAsync("/api/v1/me");
+        var response = await api.Cliente().GetAsync(Ruta);
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -89,9 +23,9 @@ public class MeEndpointTests
     [Fact]
     public async Task Con_un_token_basura_responde_401()
     {
-        using var client = CreateClient("esto-no-es-un-jwt");
+        using var api = await TestApi.CrearAsync(postgres);
 
-        var response = await client.GetAsync("/api/v1/me");
+        var response = await api.Cliente("esto-no-es-un-jwt").GetAsync(Ruta);
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -99,10 +33,10 @@ public class MeEndpointTests
     [Fact]
     public async Task Con_firma_de_otra_clave_responde_401()
     {
-        var otraClave = new SymmetricSecurityKey(RandomNumberGenerator.GetBytes(32));
-        using var client = CreateClient(CreateToken(key: otraClave));
+        using var api = await TestApi.CrearAsync(postgres);
+        var token = TestApi.CrearToken("u", TestApi.EmailAdministrador, key: TestApi.OtraClave());
 
-        var response = await client.GetAsync("/api/v1/me");
+        var response = await api.Cliente(token).GetAsync(Ruta);
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -110,9 +44,10 @@ public class MeEndpointTests
     [Fact]
     public async Task Con_otro_proyecto_de_firebase_responde_401()
     {
-        using var client = CreateClient(CreateToken(project: "otro-proyecto"));
+        using var api = await TestApi.CrearAsync(postgres);
+        var token = TestApi.CrearToken("u", TestApi.EmailAdministrador, project: "otro-proyecto");
 
-        var response = await client.GetAsync("/api/v1/me");
+        var response = await api.Cliente(token).GetAsync(Ruta);
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -120,22 +55,61 @@ public class MeEndpointTests
     [Fact]
     public async Task Con_token_vencido_responde_401()
     {
-        using var client = CreateClient(CreateToken(lifetime: TimeSpan.FromHours(-1)));
+        using var api = await TestApi.CrearAsync(postgres);
+        var token = TestApi.CrearToken("u", TestApi.EmailAdministrador, vigencia: TimeSpan.FromHours(-1));
 
-        var response = await client.GetAsync("/api/v1/me");
+        var response = await api.Cliente(token).GetAsync(Ruta);
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
-    public async Task Con_token_valido_devuelve_la_identidad()
+    public async Task Administrador_inicial_ingresa_y_queda_vinculado_a_su_uid()
     {
-        using var client = CreateClient(CreateToken());
+        using var api = await TestApi.CrearAsync(postgres);
 
-        var response = await client.GetAsync("/api/v1/me");
+        var response = await api.ClienteAdministrador().GetAsync(Ruta);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var usuario = await response.Content.ReadFromJsonAsync<UsuarioActualDto>();
-        Assert.Equal(new UsuarioActualDto("uid-123", "dueno@puntoios.com", true, "Dueño"), usuario);
+        var yo = await response.Content.ReadFromJsonAsync<UsuarioActualDto>();
+        Assert.Equal(TestApi.UidAdministrador, yo!.Uid);
+        Assert.Equal(TestApi.EmailAdministrador, yo.Email);
+        Assert.Equal(RolesDeSistema.Administrador, yo.Rol);
+        Assert.NotNull(yo.UsuarioId);
+        Assert.Equal(Permisos.Catalogo.Keys.Order(StringComparer.Ordinal), yo.Permisos);
+    }
+
+    [Fact]
+    public async Task Usuario_de_firebase_no_registrado_responde_403()
+    {
+        using var api = await TestApi.CrearAsync(postgres);
+        var token = TestApi.CrearToken("uid-ajeno", "ajeno@x.com");
+
+        var response = await api.Cliente(token).GetAsync(Ruta);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Email_registrado_pero_sin_verificar_responde_403()
+    {
+        using var api = await TestApi.CrearAsync(postgres);
+        var token = TestApi.CrearToken("uid-nuevo", TestApi.EmailAdministrador, emailVerificado: false);
+
+        var response = await api.Cliente(token).GetAsync(Ruta);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Otro_uid_no_puede_apropiarse_del_email_del_administrador_ya_vinculado()
+    {
+        using var api = await TestApi.CrearAsync(postgres);
+        await api.ClienteAdministrador().GetAsync(Ruta); // vincula uid-admin
+
+        var intruso = TestApi.CrearToken("uid-intruso", TestApi.EmailAdministrador);
+        var response = await api.Cliente(intruso).GetAsync(Ruta);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 }

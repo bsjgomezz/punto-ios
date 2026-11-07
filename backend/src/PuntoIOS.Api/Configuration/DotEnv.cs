@@ -46,7 +46,8 @@ public static class DotEnv
 
             var key = line[..separator].Trim();
             var value = line[(separator + 1)..].Trim().Trim('"');
-            if (Environment.GetEnvironmentVariable(key) is null)
+            // Un valor vacío no se aplica: pisaría con "" los valores por defecto de appsettings.
+            if (value.Length > 0 && Environment.GetEnvironmentVariable(key) is null)
             {
                 Environment.SetEnvironmentVariable(key, value);
             }

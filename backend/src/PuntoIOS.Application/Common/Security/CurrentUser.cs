@@ -1,4 +1,14 @@
 namespace PuntoIOS.Application.Common.Security;
 
-/// <summary>Identidad del usuario autenticado, tal como la informa el proveedor de identidad (Firebase).</summary>
-public sealed record CurrentUser(string Uid, string? Email, bool EmailVerified, string? Name);
+/// <summary>
+/// Usuario autenticado de la solicitud actual. Uid, email y nombre vienen de Firebase;
+/// UsuarioId, Rol y Permisos vienen del usuario local (null si no está registrado).
+/// </summary>
+public sealed record CurrentUser(
+    string Uid,
+    string? Email,
+    bool EmailVerified,
+    string? Name,
+    Guid? UsuarioId = null,
+    string? Rol = null,
+    IReadOnlyList<string>? Permisos = null);

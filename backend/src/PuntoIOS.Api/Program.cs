@@ -3,9 +3,10 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using PuntoIOS.Api.Authentication;
 using PuntoIOS.Api.Configuration;
+using PuntoIOS.Api.Extensions;
 using PuntoIOS.Api.Health;
-using PuntoIOS.Application.Common.Security;
-using PuntoIOS.Application.Features.Identidad.ObtenerUsuarioActual;
+using PuntoIOS.Infrastructure;
+using PuntoIOS.Infrastructure.Persistence;
 
 DotEnv.LoadForDevelopment();
 
@@ -37,6 +38,21 @@ builder.Services
     {
         var projectId = configuration["Firebase:ProjectId"];
         options.MapInboundClaims = false; // se conservan los nombres originales: sub, email, name...
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = UsuarioLocalClaims.AsociarAsync,
+            OnAuthenticationFailed = context =>
+            {
+                // Se registra el motivo (sin el token) para poder diagnosticar un 401.
+                context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
+                    .CreateLogger("PuntoIOS.Autenticacion")
+                    .LogWarning(
+                        "Autenticación rechazada ({Tipo}): {Motivo}",
+                        context.Exception.GetType().Name,
+                        context.Exception.Message);
+                return Task.CompletedTask;
+            },
+        };
 
         if (string.IsNullOrWhiteSpace(projectId))
         {
@@ -56,10 +72,9 @@ builder.Services
         };
     });
 
-builder.Services.AddAuthorization();
-
-builder.Services.AddScoped<ICurrentUserAccessor, HttpContextCurrentUserAccessor>();
-builder.Services.AddScoped<ObtenerUsuarioActualHandler>();
+builder.Services.AddPoliticasDeAutorizacion();
+builder.Services.AddInfrastructure(sp => sp.GetRequiredService<IConfiguration>().GetConnectionString("Default"));
+builder.Services.AddCasosDeUso();
 
 builder.Services.AddHealthChecks()
     .AddCheck<PostgresReadyCheck>("postgres", tags: ["ready"]);
@@ -69,6 +84,14 @@ var app = builder.Build();
 if (string.IsNullOrWhiteSpace(app.Configuration["Firebase:ProjectId"]))
 {
     app.Logger.LogWarning("Falta Firebase:ProjectId: todas las solicitudes autenticadas serán rechazadas.");
+}
+
+// Aplica migraciones y crea el administrador inicial (Seed:AdminEmail). Se activa por configuración.
+if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
+{
+    using var scope = app.Services.CreateScope();
+    await scope.ServiceProvider.GetRequiredService<InicializadorBaseDeDatos>()
+        .EjecutarAsync(app.Configuration["Seed:AdminEmail"]);
 }
 
 if (app.Environment.IsDevelopment())

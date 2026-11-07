@@ -21,7 +21,7 @@ describe("ServerIdentity", () => {
   it("envía el token y confirma que el servidor reconoce la sesión", async () => {
     mocks.getIdToken.mockResolvedValue("token-123");
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ uid: "u1", email: "dueno@puntoios.com", emailVerificado: true, nombre: null }), {
+      new Response(JSON.stringify({ uid: "u1", email: "dueno@puntoios.com", emailVerificado: true, nombre: null, usuarioId: "id-1", rol: "Administrador", permisos: [] }), {
         status: 200,
       }),
     );
@@ -29,7 +29,7 @@ describe("ServerIdentity", () => {
 
     render(<ServerIdentity />);
 
-    expect(await screen.findByText(/El servidor reconoce tu sesión \(dueno@puntoios.com\)/)).toBeInTheDocument();
+    expect(await screen.findByText(/El servidor reconoce tu sesión \(dueno@puntoios.com\) como Administrador/)).toBeInTheDocument();
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toMatch(/\/api\/v1\/me$/);
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer token-123");
@@ -42,6 +42,15 @@ describe("ServerIdentity", () => {
     render(<ServerIdentity />);
 
     expect(await screen.findByText(/El servidor no reconoce tu sesión/)).toBeInTheDocument();
+  });
+
+  it("avisa si la cuenta no está habilitada (403)", async () => {
+    mocks.getIdToken.mockResolvedValue("token");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 403 })));
+
+    render(<ServerIdentity />);
+
+    expect(await screen.findByText(/Tu cuenta todavía no está habilitada/)).toBeInTheDocument();
   });
 
   it("explica qué hacer si no se llega al servidor", async () => {

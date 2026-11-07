@@ -23,10 +23,10 @@ Backend ASP.NET Core con solución por capas, frontend Next.js (TS estricto), Po
 
 **Pendiente de la fase (diferido):** CI con GitHub Actions (requiere repositorio remoto).
 
-### Fase 2 — Autenticación y permisos
+### Fase 2 — Autenticación y permisos ✅
 - S1 Login/logout Firebase en frontend, rutas protegidas.
 - S2 Validación del Firebase ID Token en backend, mapeo `uid` → usuario local.
-- S3 Roles y permisos en PostgreSQL (Administrador, Recepción/Ventas, Técnico), políticas de autorización, gestión básica de usuarios.
+- S3 Roles y permisos en PostgreSQL (Administrador, Recepción/Ventas, Técnico), políticas de autorización, gestión básica de usuarios. ✅ *(backend 74/74 pruebas con PostgreSQL real; frontend 35/35 Vitest, lint y typecheck limpios; verificado a mano: el panel reconoce al administrador. Pendiente: pantalla de gestión de usuarios en el frontend, la API ya existe)*
 **Pruebas:** token inválido/expirado, acceso sin permiso por rol, matriz de autorización.
 **Aceptación:** el usuario inicia sesión y accede solo a lo que su rol permite.
 

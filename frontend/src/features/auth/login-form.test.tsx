@@ -39,7 +39,7 @@ describe("LoginForm", () => {
   it("pide completar ambos campos y no llama a Firebase", () => {
     render(<LoginForm />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Ingresar", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
 
     expect(screen.getByRole("alert")).toHaveTextContent("Ingresá tu email y tu contraseña.");
     expect(mocks.signIn).not.toHaveBeenCalled();
@@ -50,7 +50,7 @@ describe("LoginForm", () => {
     render(<LoginForm />);
 
     completar("  dueno@puntoios.com ", "secreta123");
-    fireEvent.click(screen.getByRole("button", { name: "Ingresar", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
 
     await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/panel"));
     expect(mocks.signIn).toHaveBeenCalledWith("dueno@puntoios.com", "secreta123", true);
@@ -61,7 +61,7 @@ describe("LoginForm", () => {
     render(<LoginForm />);
 
     completar("dueno@puntoios.com", "secreta123");
-    fireEvent.click(screen.getByRole("button", { name: "Ingresar", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
 
     await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/panel"));
     expect(localStorage.getItem("puntoios.email")).toBe("dueno@puntoios.com");
@@ -75,7 +75,7 @@ describe("LoginForm", () => {
 
     completar("dueno@puntoios.com", "secreta123");
     fireEvent.click(screen.getByLabelText("Recordarme en este dispositivo"));
-    fireEvent.click(screen.getByRole("button", { name: "Ingresar", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
 
     await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/panel"));
     expect(mocks.signIn).toHaveBeenCalledWith("dueno@puntoios.com", "secreta123", false);
@@ -94,11 +94,11 @@ describe("LoginForm", () => {
     render(<LoginForm />);
 
     completar("dueno@puntoios.com", "mala");
-    fireEvent.click(screen.getByRole("button", { name: "Ingresar", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Ingresar" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Email o contraseña incorrectos.");
     expect(mocks.replace).not.toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "Ingresar", exact: true })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Ingresar" })).toBeEnabled();
   });
 
   it("ingresa con Google y lleva al panel", async () => {

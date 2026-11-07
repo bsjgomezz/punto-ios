@@ -355,6 +355,7 @@ a.btn {
 }
 
 .identity[data-state="rejected"],
+.identity[data-state="forbidden"],
 .identity[data-state="unreachable"] {
   border-left-color: var(--bad);
 }

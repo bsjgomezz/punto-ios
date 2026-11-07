@@ -50,8 +50,14 @@ internal sealed class RolPermisoConfiguration : IEntityTypeConfiguration<RolPerm
         builder.HasOne<Permiso>().WithMany().HasForeignKey(rp => rp.PermisoCodigo).OnDelete(DeleteBehavior.Restrict);
 
         // Permisos iniciales por rol (editables luego). El Administrador tiene todo el catálogo.
-        var recepcion = new[] { Permisos.ClientesVer, Permisos.ClientesCrear, Permisos.ClientesEditar };
-        var tecnico = new[] { Permisos.ClientesVer };
+        var recepcion = new[]
+        {
+            Permisos.ClientesVer, Permisos.ClientesCrear, Permisos.ClientesEditar,
+            Permisos.DispositivosVer, Permisos.DispositivosCrear, Permisos.DispositivosEditar, Permisos.DispositivosVerImei,
+        };
+
+        // El técnico ve el IMEI completo para chequear bloqueos (iCloud, denuncias); cada consulta queda registrada.
+        var tecnico = new[] { Permisos.ClientesVer, Permisos.DispositivosVer, Permisos.DispositivosVerImei };
 
         builder.HasData(
             Permisos.Catalogo.Keys.Select(c => new RolPermiso(RolesDeSistema.AdministradorId, c))

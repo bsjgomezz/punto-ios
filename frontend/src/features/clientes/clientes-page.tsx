@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BackLink } from "@/components/back-link";
 import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { SessionBar } from "@/features/auth/session-bar";
@@ -24,7 +25,7 @@ export function ClientesPage() {
   const [recarga, setRecarga] = useState(0);
   const [resultado, setResultado] = useState<Resultado | null>(null);
   const [creando, setCreando] = useState(false);
-  const [guardado, setGuardado] = useState<string | null>(null);
+  const [guardado, setGuardado] = useState<{ texto: string; id: string } | null>(null);
 
   const clave = `${consulta.q}|${consulta.page}|${recarga}`;
   const cargando = resultado?.clave !== clave;
@@ -57,7 +58,7 @@ export function ClientesPage() {
 
   function alCrear(cliente: Cliente) {
     setCreando(false);
-    setGuardado(`Cliente guardado: ${cliente.apellido}, ${cliente.nombre}.`);
+    setGuardado({ texto: `Cliente guardado: ${cliente.apellido}, ${cliente.nombre}.`, id: cliente.id });
     setRecarga((n) => n + 1);
   }
 
@@ -73,9 +74,7 @@ export function ClientesPage() {
         <SessionBar />
       </header>
 
-      <p className="back-link">
-        <Link href="/panel">Volver al panel</Link>
-      </p>
+      <BackLink href="/panel">Volver al panel</BackLink>
       <h1 className="page-title">Clientes</h1>
 
       <div className="toolbar">
@@ -109,7 +108,7 @@ export function ClientesPage() {
 
       {guardado && (
         <p className="identity" data-state="ok" role="status">
-          {guardado}
+          {guardado.texto} <Link href={`/clientes/${guardado.id}`}>Ver ficha</Link>
         </p>
       )}
 

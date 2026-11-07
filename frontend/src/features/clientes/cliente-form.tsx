@@ -3,7 +3,9 @@
 import { useState, type FormEvent } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { ApiError } from "@/lib/api/client";
-import type { Cliente, Coincidencia, DatosCliente } from "./api";
+import { AvisoImeiDuplicado } from "@/features/dispositivos/aviso-imei-duplicado";
+import { CamposEquipo } from "@/features/dispositivos/campos-equipo";
+import type { Cliente, Coincidencia, DatosCliente, EquipoNuevo } from "./api";
 
 type Props = {
   titulo: string;
@@ -11,12 +13,30 @@ type Props = {
   etiquetaGuardar: string;
   inicial?: Cliente;
   mensajeSinPermiso: string;
+  /** Muestra la sección opcional para cargar el equipo que trae el cliente (solo en el alta). */
+  conEquipo?: boolean;
   guardar: (token: string, datos: DatosCliente) => Promise<Cliente>;
   onGuardado: (cliente: Cliente) => void;
   onCancelar: () => void;
 };
 
-type Aviso = { kind: "error"; mensaje: string } | { kind: "duplicado"; coincidencias: Coincidencia[] };
+type Aviso =
+  | { kind: "error"; mensaje: string }
+  | { kind: "duplicado"; coincidencias: Coincidencia[] }
+  | { kind: "imei"; duenio: Coincidencia | null };
+
+/** Arma el equipo solo si se completó algo más que la marca (que viene con "Apple" por defecto). */
+function leerEquipo(texto: (campo: string) => string): EquipoNuevo | undefined {
+  const equipo = {
+    marca: texto("equipo_marca"),
+    modelo: texto("equipo_modelo"),
+    almacenamiento: texto("equipo_almacenamiento") || undefined,
+    color: texto("equipo_color") || undefined,
+    imeiSerie: texto("equipo_imeiSerie") || undefined,
+  };
+  const cargado = equipo.modelo || equipo.almacenamiento || equipo.color || equipo.imeiSerie;
+  return cargado ? equipo : undefined;
+}
 
 /** Formulario de cliente para alta y edición. Si el teléfono ya existe muestra quién lo tiene y deja guardarlo igual. */
 export function ClienteForm({
@@ -25,6 +45,7 @@ export function ClienteForm({
   etiquetaGuardar,
   inicial,
   mensajeSinPermiso,
+  conEquipo = false,
   guardar,
   onGuardado,
   onCancelar,
@@ -50,10 +71,13 @@ export function ClienteForm({
         direccion: texto("direccion") || undefined,
         observaciones: texto("observaciones") || undefined,
         permitirDuplicado,
+        equipo: conEquipo ? leerEquipo(texto) : undefined,
       });
       onGuardado(cliente);
     } catch (error) {
-      if (error instanceof ApiError && error.problem?.codigo === "telefono_duplicado") {
+      if (error instanceof ApiError && error.problem?.codigo === "imei_duplicado") {
+        setAviso({ kind: "imei", duenio: (error.problem.cliente as Coincidencia | null) ?? null });
+      } else if (error instanceof ApiError && error.problem?.codigo === "telefono_duplicado") {
         setAviso({ kind: "duplicado", coincidencias: (error.problem.coincidencias as Coincidencia[]) ?? [] });
       } else if (error instanceof ApiError && error.status === 403) {
         setAviso({ kind: "error", mensaje: mensajeSinPermiso });
@@ -102,6 +126,16 @@ export function ClienteForm({
           <textarea id="cliente-observaciones" name="observaciones" rows={3} maxLength={1000} defaultValue={inicial?.observaciones ?? ""} />
         </div>
       </div>
+
+      {conEquipo && (
+        <fieldset className="equipo-fieldset">
+          <legend>Equipo que trae (opcional)</legend>
+          <p className="fieldset-hint">Si lo completás, se guarda junto con el cliente. Podés agregar más equipos después desde su ficha.</p>
+          <CamposEquipo prefijo="alta-equipo" nombre="equipo_" />
+        </fieldset>
+      )}
+
+      {aviso?.kind === "imei" && <AvisoImeiDuplicado duenio={aviso.duenio} />}
 
       {aviso?.kind === "error" && (
         <p className="form-error" role="alert">

@@ -4,7 +4,7 @@ using System.Text.Json;
 using PuntoIOS.Api.Controllers;
 using PuntoIOS.Application.Common.Pagination;
 using PuntoIOS.Application.Features.Clientes;
-using PuntoIOS.Application.Features.Clientes.HistorialCliente;
+using PuntoIOS.Application.Features.Auditoria;
 using PuntoIOS.Domain.Identidad;
 
 namespace PuntoIOS.IntegrationTests;

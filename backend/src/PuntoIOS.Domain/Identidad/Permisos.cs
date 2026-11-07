@@ -12,6 +12,10 @@ public static class Permisos
     public const string ClientesVer = "clientes.ver";
     public const string ClientesCrear = "clientes.crear";
     public const string ClientesEditar = "clientes.editar";
+    public const string DispositivosVer = "dispositivos.ver";
+    public const string DispositivosCrear = "dispositivos.crear";
+    public const string DispositivosEditar = "dispositivos.editar";
+    public const string DispositivosVerImei = "dispositivos.ver_imei";
 
     /// <summary>Todos los permisos con su descripción (se siembran en la base de datos).</summary>
     public static readonly IReadOnlyDictionary<string, string> Catalogo = new Dictionary<string, string>
@@ -22,5 +26,9 @@ public static class Permisos
         [ClientesVer] = "Ver y buscar clientes",
         [ClientesCrear] = "Registrar clientes nuevos",
         [ClientesEditar] = "Editar los datos de un cliente",
+        [DispositivosVer] = "Ver los equipos de los clientes (IMEI enmascarado)",
+        [DispositivosCrear] = "Registrar equipos de clientes",
+        [DispositivosEditar] = "Editar los datos de un equipo",
+        [DispositivosVerImei] = "Ver el IMEI o número de serie completo (queda registrado)",
     };
 }

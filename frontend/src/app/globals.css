@@ -380,14 +380,34 @@ a.btn {
   font-size: 0.95rem;
 }
 
-.back-link a,
 .panel-link {
   color: var(--violet);
   text-decoration: none;
 }
 
-.back-link a:hover {
-  text-decoration: underline;
+/* Botón de volver: fondo propio y flecha para que se lea como algo que se toca. */
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.95rem 0.45rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.back-button svg {
+  color: var(--violet);
+}
+
+.back-button:hover {
+  border-color: var(--violet-strong);
+  background: #2a2338;
 }
 
 .panel-nav {
@@ -632,4 +652,105 @@ a.btn {
 .client-name:hover,
 .client-name:focus-visible {
   text-decoration: underline;
+}
+
+/* Equipos del cliente */
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.device-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem 1rem;
+  flex-wrap: wrap;
+  padding: 0.85rem 0.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.device-row p {
+  margin: 0;
+}
+
+.device-row-edit {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.device-imei {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.device-imei code {
+  font-family: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
+  font-size: 0.92rem;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+}
+
+.btn-small {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+/* Contraseña con botón para mostrarla u ocultarla */
+.password-field {
+  position: relative;
+  display: grid;
+}
+
+.password-field input {
+  padding-right: 3rem;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.35rem;
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 0.45rem;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.password-toggle:hover {
+  color: var(--text);
+  background: var(--surface);
+}
+
+.password-toggle[aria-pressed="true"] {
+  color: var(--violet);
+}
+
+/* Sección del equipo dentro del alta de cliente */
+.equipo-fieldset {
+  margin: 1.25rem 0 0;
+  padding: 1rem 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+.equipo-fieldset legend {
+  padding: 0;
+  font-weight: 600;
+}
+
+.equipo-fieldset .fieldset-hint {
+  margin: 0.2rem 0 0.8rem;
+  color: var(--muted);
+  font-size: 0.9rem;
 }

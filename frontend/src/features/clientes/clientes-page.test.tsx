@@ -195,4 +195,87 @@ describe("ClientesPage", () => {
 
     expect(await screen.findByText("El teléfono debe tener entre 6 y 15 dígitos.")).toBeInTheDocument();
   });
+
+  it("en el alta permite cargar el equipo que trae y lo envía junto con el cliente", async () => {
+    mocks.getIdToken.mockResolvedValue("t");
+    const fetchMock = stubApi((url, init) => {
+      if (url.includes("/api/v1/me")) return json(me(["clientes.ver", "clientes.crear"]));
+      if (init?.method === "POST") return json({ ...ana, id: "c7", nombre: "Luis", apellido: "Gómez" }, 201);
+      return json(pagina([ana]));
+    });
+    render(<ClientesPage />);
+    await screen.findByText("Pérez, Ana");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Nuevo cliente" }));
+    const form = screen.getByRole("form", { name: "Nuevo cliente" });
+    fireEvent.change(within(form).getByLabelText("Nombre"), { target: { value: "Luis" } });
+    fireEvent.change(within(form).getByLabelText("Apellido"), { target: { value: "Gómez" } });
+    fireEvent.change(within(form).getByLabelText("Teléfono"), { target: { value: "3498 222222" } });
+    expect(within(form).getByLabelText("Marca")).toHaveValue("Apple");
+    fireEvent.change(within(form).getByLabelText("Modelo"), { target: { value: "iPhone 14" } });
+    fireEvent.change(within(form).getByLabelText("IMEI o número de serie (opcional)"), { target: { value: "490154203237518" } });
+    fireEvent.click(within(form).getByRole("button", { name: "Guardar cliente" }));
+
+    expect(await screen.findByText("Cliente guardado: Gómez, Luis.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ver ficha" })).toHaveAttribute("href", "/clientes/c7");
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST")!;
+    expect(JSON.parse(post[1]!.body as string).equipo).toEqual({
+      marca: "Apple",
+      modelo: "iPhone 14",
+      imeiSerie: "490154203237518",
+    });
+  });
+
+  it("si no se completa el equipo no lo envía", async () => {
+    mocks.getIdToken.mockResolvedValue("t");
+    const fetchMock = stubApi((url, init) => {
+      if (url.includes("/api/v1/me")) return json(me(["clientes.ver", "clientes.crear"]));
+      if (init?.method === "POST") return json({ ...ana, id: "c8" }, 201);
+      return json(pagina([ana]));
+    });
+    render(<ClientesPage />);
+    await screen.findByText("Pérez, Ana");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Nuevo cliente" }));
+    const form = screen.getByRole("form", { name: "Nuevo cliente" });
+    fireEvent.change(within(form).getByLabelText("Nombre"), { target: { value: "Ana" } });
+    fireEvent.change(within(form).getByLabelText("Apellido"), { target: { value: "Pérez" } });
+    fireEvent.change(within(form).getByLabelText("Teléfono"), { target: { value: "3498 333333" } });
+    fireEvent.click(within(form).getByRole("button", { name: "Guardar cliente" }));
+
+    await screen.findByText("Cliente guardado: Pérez, Ana.");
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST")!;
+    expect(JSON.parse(post[1]!.body as string)).not.toHaveProperty("equipo");
+  });
+
+  it("si el IMEI del equipo ya está registrado avisa de quién es y no se guarda nada", async () => {
+    mocks.getIdToken.mockResolvedValue("t");
+    stubApi((url, init) => {
+      if (url.includes("/api/v1/me")) return json(me(["clientes.ver", "clientes.crear"]));
+      if (init?.method === "POST")
+        return json(
+          {
+            title: "Ese IMEI o número de serie ya está registrado en otro equipo.",
+            codigo: "imei_duplicado",
+            cliente: { id: "c1", nombre: "Ana", apellido: "Pérez", telefono: "3498 111111" },
+          },
+          409,
+        );
+      return json(pagina([ana]));
+    });
+    render(<ClientesPage />);
+    await screen.findByText("Pérez, Ana");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Nuevo cliente" }));
+    const form = screen.getByRole("form", { name: "Nuevo cliente" });
+    fireEvent.change(within(form).getByLabelText("Nombre"), { target: { value: "Luis" } });
+    fireEvent.change(within(form).getByLabelText("Apellido"), { target: { value: "Gómez" } });
+    fireEvent.change(within(form).getByLabelText("Teléfono"), { target: { value: "3498 222222" } });
+    fireEvent.change(within(form).getByLabelText("Modelo"), { target: { value: "iPhone 14" } });
+    fireEvent.change(within(form).getByLabelText("IMEI o número de serie (opcional)"), { target: { value: "490154203237518" } });
+    fireEvent.click(within(form).getByRole("button", { name: "Guardar cliente" }));
+
+    expect(await within(form).findByRole("link", { name: "Pérez, Ana" })).toHaveAttribute("href", "/clientes/c1");
+    expect(within(form).queryByRole("button", { name: "Guardar igual" })).not.toBeInTheDocument();
+  });
 });

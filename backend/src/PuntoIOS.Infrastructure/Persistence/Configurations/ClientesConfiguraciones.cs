@@ -43,3 +43,33 @@ internal sealed class ClienteConfiguration : IEntityTypeConfiguration<Cliente>
         builder.HasOne<Local>().WithMany().HasForeignKey(c => c.LocalId).OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+internal sealed class DispositivoConfiguration : IEntityTypeConfiguration<Dispositivo>
+{
+    public void Configure(EntityTypeBuilder<Dispositivo> builder)
+    {
+        builder.ToTable("dispositivos");
+        builder.HasKey(d => d.Id);
+        builder.Property(d => d.Id).HasColumnName("id").ValueGeneratedNever();
+        builder.Property(d => d.LocalId).HasColumnName("local_id");
+        builder.Property(d => d.ClienteId).HasColumnName("cliente_id");
+        builder.Property(d => d.Marca).HasColumnName("marca").HasMaxLength(Dispositivo.LargoMaximoMarca).IsRequired();
+        builder.Property(d => d.Modelo).HasColumnName("modelo").HasMaxLength(Dispositivo.LargoMaximoModelo).IsRequired();
+        builder.Property(d => d.Almacenamiento).HasColumnName("almacenamiento").HasMaxLength(Dispositivo.LargoMaximoAlmacenamiento);
+        builder.Property(d => d.Color).HasColumnName("color").HasMaxLength(Dispositivo.LargoMaximoColor);
+        builder.Property(d => d.ImeiSerie).HasColumnName("imei_serie").HasMaxLength(Dispositivo.MaximoCaracteresImei);
+        builder.Property(d => d.Observaciones).HasColumnName("observaciones").HasMaxLength(Dispositivo.LargoMaximoObservaciones);
+        builder.Property(d => d.CreadoPorUsuarioId).HasColumnName("creado_por_usuario_id");
+        builder.Property(d => d.CreadoEn).HasColumnName("creado_en");
+        builder.Ignore(d => d.ImeiSerieEnmascarado);
+
+        // Un IMEI no puede repetirse dentro del local: la base lo garantiza aunque dos personas carguen a la vez.
+        builder.HasIndex(d => new { d.LocalId, d.ImeiSerie })
+            .IsUnique()
+            .HasFilter("imei_serie IS NOT NULL");
+        builder.HasIndex(d => new { d.LocalId, d.ClienteId });
+
+        builder.HasOne<Local>().WithMany().HasForeignKey(d => d.LocalId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Cliente>().WithMany().HasForeignKey(d => d.ClienteId).OnDelete(DeleteBehavior.Restrict);
+    }
+}

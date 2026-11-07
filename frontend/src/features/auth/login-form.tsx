@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { PasswordInput } from "@/components/password-input";
 import { describeAuthError } from "./auth-errors";
 import { useAuth } from "./auth-provider";
 import { readRememberedEmail, writeRememberedEmail } from "./remembered-email";
@@ -83,7 +84,7 @@ export function LoginForm() {
 
       <div className="field">
         <label htmlFor="password">Contraseña</label>
-        <input id="password" name="password" type="password" autoComplete="current-password" />
+        <PasswordInput id="password" name="password" autoComplete="current-password" />
       </div>
 
       <label className="remember">

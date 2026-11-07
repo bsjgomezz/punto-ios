@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "@/components/back-link";
 import { LoginForm } from "@/features/auth/login-form";
 
 export default function IngresarPage() {
@@ -13,9 +13,7 @@ export default function IngresarPage() {
 
       <LoginForm />
 
-      <p className="footnote">
-        <Link href="/">Volver al inicio</Link>
-      </p>
+      <BackLink href="/">Volver al inicio</BackLink>
     </main>
   );
 }

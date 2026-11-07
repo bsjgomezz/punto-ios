@@ -14,9 +14,10 @@ public class CrearClienteHandlerTests
 
     private readonly ClienteRepoEnMemoria _repo = new();
     private readonly AuditoriaRepoEnMemoria _auditoria = new();
+    private readonly DispositivoRepoEnMemoria _dispositivos = new();
 
     private CrearClienteHandler Crear() =>
-        new(_repo, _auditoria, new LocalFijo(LocalId), new UsuarioFijo(UsuarioId), new RelojFijo(Ahora));
+        new(_repo, _dispositivos, _auditoria, new LocalFijo(LocalId), new UsuarioFijo(UsuarioId), new RelojFijo(Ahora));
 
     private static CrearClienteCommand Comando(
         string? nombre = "Ana",
@@ -101,5 +102,46 @@ public class CrearClienteHandlerTests
 
         Assert.True(resultado.EsExitoso);
         Assert.Equal(2, _repo.Clientes.Count);
+    }
+
+    private static readonly EquipoNuevo Iphone = new("Apple", "iPhone 13", "128 GB", "Azul", "490154203237518");
+
+    [Fact]
+    public async Task Con_equipo_guarda_cliente_y_equipo_juntos_con_su_auditoria()
+    {
+        var resultado = await Crear().HandleAsync(Comando() with { Equipo = Iphone }, default);
+
+        Assert.True(resultado.EsExitoso);
+        var equipo = Assert.Single(_dispositivos.Dispositivos);
+        Assert.Equal(resultado.Valor!.Id, equipo.ClienteId);
+        Assert.Equal("490154203237518", equipo.ImeiSerie);
+        Assert.Equal(
+            new[] { EntidadesAuditadas.Cliente, EntidadesAuditadas.Dispositivo },
+            _auditoria.Registros.Select(r => r.Entidad));
+        Assert.Equal(1, _repo.Guardados);
+    }
+
+    [Fact]
+    public async Task Si_el_equipo_es_invalido_no_se_guarda_ni_el_cliente()
+    {
+        var resultado = await Crear().HandleAsync(Comando() with { Equipo = Iphone with { Modelo = " " } }, default);
+
+        Assert.Equal("modelo_obligatorio", resultado.Error!.Codigo);
+        Assert.Empty(_repo.Clientes);
+        Assert.Empty(_dispositivos.Dispositivos);
+    }
+
+    [Fact]
+    public async Task Si_el_imei_ya_esta_registrado_no_se_guarda_ni_el_cliente()
+    {
+        await Crear().HandleAsync(Comando() with { Equipo = Iphone }, default);
+
+        var resultado = await Crear().HandleAsync(
+            Comando(nombre: "Luis", telefono: "3498 999999") with { Equipo = Iphone with { ImeiSerie = "49 0154 2032 3751 8" } },
+            default);
+
+        Assert.Equal("imei_duplicado", resultado.Error!.Codigo);
+        Assert.Single(_repo.Clientes);
+        Assert.Single(_dispositivos.Dispositivos);
     }
 }

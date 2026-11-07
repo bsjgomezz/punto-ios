@@ -65,3 +65,28 @@ internal sealed class UsuarioFijo(Guid usuarioId) : ICurrentUserAccessor
 {
     public CurrentUser? GetCurrentUser() => new("uid", "a@b.com", true, null, usuarioId);
 }
+
+internal sealed class DispositivoRepoEnMemoria : PuntoIOS.Application.Features.Dispositivos.Puertos.IDispositivoRepositorio
+{
+    public List<Dispositivo> Dispositivos { get; } = [];
+
+    public int Guardados { get; private set; }
+
+    public Task<Dispositivo?> ObtenerPorIdAsync(Guid id, CancellationToken ct) =>
+        Task.FromResult(Dispositivos.FirstOrDefault(d => d.Id == id));
+
+    public Task<IReadOnlyList<Dispositivo>> ListarPorClienteAsync(Guid clienteId, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<Dispositivo>>(
+            Dispositivos.Where(d => d.ClienteId == clienteId).OrderByDescending(d => d.CreadoEn).ToList());
+
+    public Task<Dispositivo?> ObtenerPorImeiAsync(string imeiNormalizado, CancellationToken ct) =>
+        Task.FromResult(Dispositivos.FirstOrDefault(d => d.ImeiSerie == imeiNormalizado));
+
+    public void Agregar(Dispositivo dispositivo) => Dispositivos.Add(dispositivo);
+
+    public Task GuardarCambiosAsync(CancellationToken ct)
+    {
+        Guardados++;
+        return Task.CompletedTask;
+    }
+}

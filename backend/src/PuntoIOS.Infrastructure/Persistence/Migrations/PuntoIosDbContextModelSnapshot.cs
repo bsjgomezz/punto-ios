@@ -129,6 +129,73 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                     b.ToTable("clientes", (string)null);
                 });
 
+            modelBuilder.Entity("PuntoIOS.Domain.Clientes.Dispositivo", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Almacenamiento")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("almacenamiento");
+
+                    b.Property<Guid>("ClienteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cliente_id");
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("color");
+
+                    b.Property<DateTimeOffset>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<Guid?>("CreadoPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("creado_por_usuario_id");
+
+                    b.Property<string>("ImeiSerie")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("imei_serie");
+
+                    b.Property<Guid>("LocalId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("local_id");
+
+                    b.Property<string>("Marca")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("marca");
+
+                    b.Property<string>("Modelo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("modelo");
+
+                    b.Property<string>("Observaciones")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("observaciones");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClienteId");
+
+                    b.HasIndex("LocalId", "ClienteId");
+
+                    b.HasIndex("LocalId", "ImeiSerie")
+                        .IsUnique()
+                        .HasFilter("imei_serie IS NOT NULL");
+
+                    b.ToTable("dispositivos", (string)null);
+                });
+
             modelBuilder.Entity("PuntoIOS.Domain.Identidad.Permiso", b =>
                 {
                     b.Property<string>("Codigo")
@@ -176,6 +243,26 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         {
                             Codigo = "clientes.editar",
                             Descripcion = "Editar los datos de un cliente"
+                        },
+                        new
+                        {
+                            Codigo = "dispositivos.ver",
+                            Descripcion = "Ver los equipos de los clientes (IMEI enmascarado)"
+                        },
+                        new
+                        {
+                            Codigo = "dispositivos.crear",
+                            Descripcion = "Registrar equipos de clientes"
+                        },
+                        new
+                        {
+                            Codigo = "dispositivos.editar",
+                            Descripcion = "Editar los datos de un equipo"
+                        },
+                        new
+                        {
+                            Codigo = "dispositivos.ver_imei",
+                            Descripcion = "Ver el IMEI o número de serie completo (queda registrado)"
                         });
                 });
 
@@ -282,6 +369,26 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         },
                         new
                         {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000001"),
+                            PermisoCodigo = "dispositivos.ver"
+                        },
+                        new
+                        {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000001"),
+                            PermisoCodigo = "dispositivos.crear"
+                        },
+                        new
+                        {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000001"),
+                            PermisoCodigo = "dispositivos.editar"
+                        },
+                        new
+                        {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000001"),
+                            PermisoCodigo = "dispositivos.ver_imei"
+                        },
+                        new
+                        {
                             RolId = new Guid("0195a000-0000-7000-8000-000000000002"),
                             PermisoCodigo = "clientes.ver"
                         },
@@ -297,8 +404,38 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         },
                         new
                         {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000002"),
+                            PermisoCodigo = "dispositivos.ver"
+                        },
+                        new
+                        {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000002"),
+                            PermisoCodigo = "dispositivos.crear"
+                        },
+                        new
+                        {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000002"),
+                            PermisoCodigo = "dispositivos.editar"
+                        },
+                        new
+                        {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000002"),
+                            PermisoCodigo = "dispositivos.ver_imei"
+                        },
+                        new
+                        {
                             RolId = new Guid("0195a000-0000-7000-8000-000000000003"),
                             PermisoCodigo = "clientes.ver"
+                        },
+                        new
+                        {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000003"),
+                            PermisoCodigo = "dispositivos.ver"
+                        },
+                        new
+                        {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000003"),
+                            PermisoCodigo = "dispositivos.ver_imei"
                         });
                 });
 
@@ -411,6 +548,21 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("PuntoIOS.Domain.Clientes.Cliente", b =>
                 {
+                    b.HasOne("PuntoIOS.Domain.Locales.Local", null)
+                        .WithMany()
+                        .HasForeignKey("LocalId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PuntoIOS.Domain.Clientes.Dispositivo", b =>
+                {
+                    b.HasOne("PuntoIOS.Domain.Clientes.Cliente", null)
+                        .WithMany()
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("PuntoIOS.Domain.Locales.Local", null)
                         .WithMany()
                         .HasForeignKey("LocalId")

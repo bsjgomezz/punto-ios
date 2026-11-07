@@ -23,6 +23,16 @@ export type NuevoCliente = {
   direccion?: string;
   observaciones?: string;
   permitirDuplicado?: boolean;
+  /** Equipo que trae el cliente; se guarda junto con el cliente (solo en el alta). */
+  equipo?: EquipoNuevo;
+};
+
+export type EquipoNuevo = {
+  marca: string;
+  modelo: string;
+  almacenamiento?: string;
+  color?: string;
+  imeiSerie?: string;
 };
 
 export const TAMANO_PAGINA = 20;

@@ -13,6 +13,7 @@ export function NuevoClienteForm({ onCreado, onCancelar }: Props) {
       etiqueta="Nuevo cliente"
       etiquetaGuardar="Guardar cliente"
       mensajeSinPermiso="Tu rol no permite registrar clientes."
+      conEquipo
       guardar={crearCliente}
       onGuardado={onCreado}
       onCancelar={onCancelar}

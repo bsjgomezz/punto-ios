@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PuntoIOS.Application.Common.Pagination;
+using PuntoIOS.Application.Features.Auditoria;
 using PuntoIOS.Application.Features.Clientes;
 using PuntoIOS.Application.Features.Clientes.ActualizarCliente;
 using PuntoIOS.Application.Features.Clientes.BuscarClientes;
@@ -11,6 +12,14 @@ using PuntoIOS.Domain.Identidad;
 
 namespace PuntoIOS.Api.Controllers;
 
+/// <summary>Equipo que trae el cliente; se guarda junto con el cliente.</summary>
+public sealed record EquipoNuevoRequest(
+    string? Marca,
+    string? Modelo,
+    string? Almacenamiento,
+    string? Color,
+    string? ImeiSerie);
+
 public sealed record CrearClienteRequest(
     string? Nombre,
     string? Apellido,
@@ -18,7 +27,8 @@ public sealed record CrearClienteRequest(
     string? Email,
     string? Direccion,
     string? Observaciones,
-    bool PermitirDuplicado = false);
+    bool PermitirDuplicado = false,
+    EquipoNuevoRequest? Equipo = null);
 
 public sealed record ActualizarClienteRequest(
     string? Nombre,
@@ -68,7 +78,8 @@ public sealed class ClientesController(
                 request.Email,
                 request.Direccion,
                 request.Observaciones,
-                request.PermitirDuplicado),
+                request.PermitirDuplicado,
+                request.Equipo is { } e ? new EquipoNuevo(e.Marca, e.Modelo, e.Almacenamiento, e.Color, e.ImeiSerie) : null),
             ct);
 
         return resultado.EsExitoso

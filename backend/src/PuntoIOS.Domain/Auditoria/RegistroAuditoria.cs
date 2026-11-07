@@ -6,12 +6,16 @@ public sealed record CambioDeCampo(string Campo, string? Anterior, string? Nuevo
 public static class EntidadesAuditadas
 {
     public const string Cliente = "cliente";
+    public const string Dispositivo = "dispositivo";
 }
 
 public static class AccionesAuditadas
 {
     public const string Creado = "creado";
     public const string Editado = "editado";
+
+    /// <summary>Alguien vio el IMEI o número de serie completo de un equipo.</summary>
+    public const string ImeiConsultado = "imei_consultado";
 }
 
 /// <summary>

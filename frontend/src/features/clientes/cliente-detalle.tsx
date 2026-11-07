@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { BackLink } from "@/components/back-link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/features/auth/auth-provider";
 import { SessionBar } from "@/features/auth/session-bar";
@@ -13,6 +13,7 @@ import {
   type Cliente,
   type RegistroHistorial,
 } from "./api";
+import { EquiposCliente } from "@/features/dispositivos/equipos-cliente";
 import { ClienteForm } from "./cliente-form";
 
 type Datos =
@@ -40,7 +41,8 @@ function fecha(iso: string) {
 export function ClienteDetalle({ id }: { id: string }) {
   const { user } = useAuth();
   const me = useMe();
-  const puedeEditar = me.kind === "listo" && me.me.permisos.includes("clientes.editar");
+  const permisos = me.kind === "listo" ? me.me.permisos : [];
+  const puedeEditar = permisos.includes("clientes.editar");
 
   const [recarga, setRecarga] = useState(0);
   const [datos, setDatos] = useState<Datos | null>(null);
@@ -91,9 +93,7 @@ export function ClienteDetalle({ id }: { id: string }) {
         <SessionBar />
       </header>
 
-      <p className="back-link">
-        <Link href="/clientes">Volver a clientes</Link>
-      </p>
+      <BackLink href="/clientes">Volver a clientes</BackLink>
 
       {datos?.kind === "noEncontrado" && (
         <p className="form-error" role="alert">
@@ -170,6 +170,8 @@ export function ClienteDetalle({ id }: { id: string }) {
               )}
             </section>
           )}
+
+          {permisos.includes("dispositivos.ver") && <EquiposCliente clienteId={id} permisos={permisos} />}
 
           <section aria-label="Historial de cambios" className="history">
             <h2 className="client-form-title">Historial de cambios</h2>

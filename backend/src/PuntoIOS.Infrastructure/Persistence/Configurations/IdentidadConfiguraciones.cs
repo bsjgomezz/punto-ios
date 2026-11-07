@@ -50,7 +50,7 @@ internal sealed class RolPermisoConfiguration : IEntityTypeConfiguration<RolPerm
         builder.HasOne<Permiso>().WithMany().HasForeignKey(rp => rp.PermisoCodigo).OnDelete(DeleteBehavior.Restrict);
 
         // Permisos iniciales por rol (editables luego). El Administrador tiene todo el catálogo.
-        var recepcion = new[] { Permisos.ClientesVer, Permisos.ClientesCrear };
+        var recepcion = new[] { Permisos.ClientesVer, Permisos.ClientesCrear, Permisos.ClientesEditar };
         var tecnico = new[] { Permisos.ClientesVer };
 
         builder.HasData(

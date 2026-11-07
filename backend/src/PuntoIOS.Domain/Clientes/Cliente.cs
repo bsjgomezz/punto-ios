@@ -1,3 +1,5 @@
+using PuntoIOS.Domain.Auditoria;
+
 namespace PuntoIOS.Domain.Clientes;
 
 /// <summary>Cliente del negocio. Nombre, apellido y teléfono son obligatorios; el resto es opcional.</summary>
@@ -91,6 +93,78 @@ public sealed class Cliente
             CreadoPorUsuarioId = creadoPorUsuarioId,
             CreadoEn = ahora,
         };
+    }
+
+    /// <summary>Reemplaza los datos editables y devuelve únicamente los campos que realmente cambiaron.</summary>
+    public IReadOnlyList<CambioDeCampo> Actualizar(
+        string nombre,
+        string apellido,
+        string telefono,
+        string? email,
+        string? direccion,
+        string? observaciones)
+    {
+        if (string.IsNullOrWhiteSpace(nombre))
+        {
+            throw new ArgumentException("El nombre es obligatorio.", nameof(nombre));
+        }
+
+        if (string.IsNullOrWhiteSpace(apellido))
+        {
+            throw new ArgumentException("El apellido es obligatorio.", nameof(apellido));
+        }
+
+        if (ContarDigitos(telefono) < MinimoDigitosTelefono)
+        {
+            throw new ArgumentException("El teléfono no es válido.", nameof(telefono));
+        }
+
+        var cambios = new List<CambioDeCampo>();
+
+        var nombreNuevo = nombre.Trim();
+        if (nombreNuevo != Nombre)
+        {
+            cambios.Add(new CambioDeCampo("nombre", Nombre, nombreNuevo));
+            Nombre = nombreNuevo;
+        }
+
+        var apellidoNuevo = apellido.Trim();
+        if (apellidoNuevo != Apellido)
+        {
+            cambios.Add(new CambioDeCampo("apellido", Apellido, apellidoNuevo));
+            Apellido = apellidoNuevo;
+        }
+
+        var telefonoNuevo = telefono.Trim();
+        if (telefonoNuevo != Telefono)
+        {
+            cambios.Add(new CambioDeCampo("telefono", Telefono, telefonoNuevo));
+            Telefono = telefonoNuevo;
+            TelefonoNormalizado = NormalizarTelefono(telefonoNuevo);
+        }
+
+        var emailNuevo = VacioANulo(email)?.ToLowerInvariant();
+        if (emailNuevo != Email)
+        {
+            cambios.Add(new CambioDeCampo("email", Email, emailNuevo));
+            Email = emailNuevo;
+        }
+
+        var direccionNueva = VacioANulo(direccion);
+        if (direccionNueva != Direccion)
+        {
+            cambios.Add(new CambioDeCampo("direccion", Direccion, direccionNueva));
+            Direccion = direccionNueva;
+        }
+
+        var observacionesNuevas = VacioANulo(observaciones);
+        if (observacionesNuevas != Observaciones)
+        {
+            cambios.Add(new CambioDeCampo("observaciones", Observaciones, observacionesNuevas));
+            Observaciones = observacionesNuevas;
+        }
+
+        return cambios;
     }
 
     private static string? VacioANulo(string? valor) => string.IsNullOrWhiteSpace(valor) ? null : valor.Trim();

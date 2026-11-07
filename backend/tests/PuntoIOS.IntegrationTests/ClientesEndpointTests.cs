@@ -4,6 +4,7 @@ using System.Text.Json;
 using PuntoIOS.Api.Controllers;
 using PuntoIOS.Application.Common.Pagination;
 using PuntoIOS.Application.Features.Clientes;
+using PuntoIOS.Application.Features.Clientes.HistorialCliente;
 using PuntoIOS.Domain.Identidad;
 
 namespace PuntoIOS.IntegrationTests;
@@ -123,5 +124,81 @@ public class ClientesEndpointTests(PostgresFixture postgres) : IClassFixture<Pos
         var anonimo = api.Cliente();
         Assert.Equal(HttpStatusCode.Unauthorized, (await anonimo.GetAsync(Ruta)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await anonimo.PostAsJsonAsync(Ruta, Cliente())).StatusCode);
+    }
+
+    private static ActualizarClienteRequest Edicion(string apellido, string telefono = "3498 123456", bool permitirDuplicado = false) =>
+        new("Ana", apellido, telefono, null, null, null, permitirDuplicado);
+
+    [Fact]
+    public async Task Editar_actualiza_el_cliente_y_deja_el_historial_con_quien_lo_hizo()
+    {
+        using var api = await TestApi.CrearAsync(postgres);
+        var admin = api.ClienteAdministrador();
+        var creado = await (await admin.PostAsJsonAsync(Ruta, Cliente())).Content.ReadFromJsonAsync<ClienteDto>();
+
+        var respuesta = await admin.PutAsJsonAsync($"{Ruta}/{creado!.Id}", Edicion("Gómez"));
+
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+        Assert.Equal("Gómez", (await admin.GetFromJsonAsync<ClienteDto>($"{Ruta}/{creado.Id}"))!.Apellido);
+
+        var historial = await admin.GetFromJsonAsync<PagedResult<RegistroHistorialDto>>($"{Ruta}/{creado.Id}/historial");
+        Assert.Equal(2, historial!.TotalCount);
+        Assert.Equal(new[] { "editado", "creado" }, historial.Items.Select(h => h.Accion));
+        Assert.False(string.IsNullOrWhiteSpace(historial.Items[0].Usuario));
+        var cambio = Assert.Single(historial.Items[0].Cambios);
+        Assert.Equal("apellido", cambio.Campo);
+        Assert.Equal("Pérez", cambio.Anterior);
+        Assert.Equal("Gómez", cambio.Nuevo);
+    }
+
+    [Fact]
+    public async Task Editar_sin_cambios_no_agrega_entradas_al_historial()
+    {
+        using var api = await TestApi.CrearAsync(postgres);
+        var admin = api.ClienteAdministrador();
+        var creado = await (await admin.PostAsJsonAsync(Ruta, Cliente())).Content.ReadFromJsonAsync<ClienteDto>();
+
+        await admin.PutAsJsonAsync($"{Ruta}/{creado!.Id}", Edicion("Pérez"));
+
+        var historial = await admin.GetFromJsonAsync<PagedResult<RegistroHistorialDto>>($"{Ruta}/{creado.Id}/historial");
+        Assert.Equal(1, historial!.TotalCount);
+    }
+
+    [Fact]
+    public async Task Editar_valida_avisa_de_telefonos_repetidos_y_distingue_inexistentes()
+    {
+        using var api = await TestApi.CrearAsync(postgres);
+        var admin = api.ClienteAdministrador();
+        var ana = await (await admin.PostAsJsonAsync(Ruta, Cliente(telefono: "3498 111111"))).Content.ReadFromJsonAsync<ClienteDto>();
+        await admin.PostAsJsonAsync(Ruta, Cliente("Luis", "Gómez", "3498 222222"));
+
+        var invalido = await admin.PutAsJsonAsync($"{Ruta}/{ana!.Id}", Edicion("Pérez", telefono: "12"));
+        var repetido = await admin.PutAsJsonAsync($"{Ruta}/{ana.Id}", Edicion("Pérez", telefono: "+54 9 3498 22 2222"));
+        var confirmado = await admin.PutAsJsonAsync($"{Ruta}/{ana.Id}", Edicion("Pérez", telefono: "3498 222222", permitirDuplicado: true));
+        var inexistente = await admin.PutAsJsonAsync($"{Ruta}/{Guid.NewGuid()}", Edicion("Pérez"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, invalido.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, repetido.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, confirmado.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, inexistente.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync($"{Ruta}/{Guid.NewGuid()}/historial")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Matriz_de_autorizacion_de_edicion_e_historial()
+    {
+        using var api = await TestApi.CrearAsync(postgres);
+        var creado = await (await api.ClienteAdministrador().PostAsJsonAsync(Ruta, Cliente())).Content.ReadFromJsonAsync<ClienteDto>();
+        var recepcion = api.Cliente(await api.RegistrarUsuarioAsync("recepcion@x.com", RolesDeSistema.RecepcionVentasId));
+        var tecnico = api.Cliente(await api.RegistrarUsuarioAsync("tecnico@x.com", RolesDeSistema.TecnicoId));
+        var anonimo = api.Cliente();
+        var ruta = $"{Ruta}/{creado!.Id}";
+
+        Assert.Equal(HttpStatusCode.OK, (await recepcion.PutAsJsonAsync(ruta, Edicion("Gómez"))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await tecnico.PutAsJsonAsync(ruta, Edicion("Otro"))).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anonimo.PutAsJsonAsync(ruta, Edicion("Otro"))).StatusCode);
+
+        Assert.Equal(HttpStatusCode.OK, (await tecnico.GetAsync($"{ruta}/historial")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anonimo.GetAsync($"{ruta}/historial")).StatusCode);
     }
 }

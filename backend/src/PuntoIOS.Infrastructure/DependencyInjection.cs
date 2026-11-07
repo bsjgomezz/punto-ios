@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PuntoIOS.Application.Common.Multilocal;
+using PuntoIOS.Application.Features.Auditoria.Puertos;
 using PuntoIOS.Application.Features.Clientes.Puertos;
 using PuntoIOS.Application.Features.Identidad.Puertos;
 using PuntoIOS.Infrastructure.Persistence;
@@ -27,6 +28,8 @@ public static class DependencyInjection
         services.AddScoped<IUsuarioRepositorio, UsuarioRepositorio>();
         services.AddScoped<IRolRepositorio, RolRepositorio>();
         services.AddScoped<IClienteRepositorio, ClienteRepositorio>();
+        services.AddScoped<IAuditoriaRepositorio, AuditoriaRepositorio>();
+        services.AddScoped<IDirectorioDeUsuarios, DirectorioDeUsuarios>();
         services.AddSingleton<ILocalActual, LocalUnico>();
         services.AddScoped<InicializadorBaseDeDatos>();
         return services;

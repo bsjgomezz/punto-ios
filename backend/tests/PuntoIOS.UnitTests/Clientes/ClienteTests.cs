@@ -42,4 +42,25 @@ public class ClienteTests
         Assert.Throws<ArgumentException>(() =>
             Cliente.Registrar(Guid.NewGuid(), nombre, apellido, telefono, null, null, null, null, Ahora));
     }
+
+    [Fact]
+    public void Actualizar_devuelve_solo_lo_que_cambio_y_actualiza_el_telefono_normalizado()
+    {
+        var cliente = Cliente.Registrar(Guid.NewGuid(), "Ana", "Pérez", "3498 111111", null, null, null, null, Ahora);
+
+        var cambios = cliente.Actualizar("Ana", "Pérez", "+54 9 3498 22-2222", "NUEVO@mail.com", null, "  ");
+
+        Assert.Equal(new[] { "telefono", "email" }, cambios.Select(c => c.Campo));
+        Assert.Equal("3498222222", cliente.TelefonoNormalizado);
+        Assert.Equal("nuevo@mail.com", cliente.Email);
+        Assert.Null(cliente.Observaciones);
+    }
+
+    [Fact]
+    public void Actualizar_sin_cambios_devuelve_lista_vacia()
+    {
+        var cliente = Cliente.Registrar(Guid.NewGuid(), "Ana", "Pérez", "3498 111111", "a@b.com", "Calle 1", "VIP", null, Ahora);
+
+        Assert.Empty(cliente.Actualizar(" Ana ", "Pérez", "3498 111111", "A@B.com", "Calle 1", "VIP"));
+    }
 }

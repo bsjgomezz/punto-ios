@@ -1,11 +1,7 @@
-using PuntoIOS.Application.Common.Multilocal;
-using PuntoIOS.Application.Common.Pagination;
 using PuntoIOS.Application.Common.Results;
-using PuntoIOS.Application.Common.Security;
 using PuntoIOS.Application.Features.Clientes;
 using PuntoIOS.Application.Features.Clientes.CrearCliente;
-using PuntoIOS.Application.Features.Clientes.Puertos;
-using PuntoIOS.Domain.Clientes;
+using PuntoIOS.Domain.Auditoria;
 using PuntoIOS.UnitTests.Identidad;
 
 namespace PuntoIOS.UnitTests.Clientes;
@@ -16,37 +12,11 @@ public class CrearClienteHandlerTests
     private static readonly Guid LocalId = Guid.NewGuid();
     private static readonly Guid UsuarioId = Guid.NewGuid();
 
-    private sealed class ClienteRepoEnMemoria : IClienteRepositorio
-    {
-        public List<Cliente> Clientes { get; } = [];
-
-        public Task<Cliente?> ObtenerPorIdAsync(Guid id, CancellationToken ct) =>
-            Task.FromResult(Clientes.FirstOrDefault(c => c.Id == id));
-
-        public Task<IReadOnlyList<Cliente>> BuscarPorTelefonoAsync(string telefonoNormalizado, CancellationToken ct) =>
-            Task.FromResult<IReadOnlyList<Cliente>>(Clientes.Where(c => c.TelefonoNormalizado == telefonoNormalizado).ToList());
-
-        public Task<PagedResult<Cliente>> BuscarAsync(string? texto, PageRequest pagina, CancellationToken ct) =>
-            Task.FromResult(new PagedResult<Cliente>(Clientes, pagina.Page, pagina.PageSize, Clientes.Count));
-
-        public void Agregar(Cliente cliente) => Clientes.Add(cliente);
-
-        public Task GuardarCambiosAsync(CancellationToken ct) => Task.CompletedTask;
-    }
-
-    private sealed class LocalFijo : ILocalActual
-    {
-        public Guid LocalId => CrearClienteHandlerTests.LocalId;
-    }
-
-    private sealed class UsuarioFijo : ICurrentUserAccessor
-    {
-        public CurrentUser? GetCurrentUser() => new("uid", "a@b.com", true, null, UsuarioId);
-    }
-
     private readonly ClienteRepoEnMemoria _repo = new();
+    private readonly AuditoriaRepoEnMemoria _auditoria = new();
 
-    private CrearClienteHandler Crear() => new(_repo, new LocalFijo(), new UsuarioFijo(), new RelojFijo(Ahora));
+    private CrearClienteHandler Crear() =>
+        new(_repo, _auditoria, new LocalFijo(LocalId), new UsuarioFijo(UsuarioId), new RelojFijo(Ahora));
 
     private static CrearClienteCommand Comando(
         string? nombre = "Ana",
@@ -68,6 +38,19 @@ public class CrearClienteHandlerTests
         Assert.Equal("ana@mail.com", resultado.Valor!.Email);
     }
 
+    [Fact]
+    public async Task Deja_un_registro_de_auditoria_de_la_creacion_en_la_misma_operacion()
+    {
+        var resultado = await Crear().HandleAsync(Comando(), default);
+
+        var registro = Assert.Single(_auditoria.Registros);
+        Assert.Equal(AccionesAuditadas.Creado, registro.Accion);
+        Assert.Equal(EntidadesAuditadas.Cliente, registro.Entidad);
+        Assert.Equal(resultado.Valor!.Id, registro.EntidadId);
+        Assert.Equal(UsuarioId, registro.UsuarioId);
+        Assert.Equal(1, _repo.Guardados);
+    }
+
     [Theory]
     [InlineData(null, "Pérez", "3498123456", "nombre_obligatorio")]
     [InlineData("Ana", "", "3498123456", "apellido_obligatorio")]
@@ -82,6 +65,7 @@ public class CrearClienteHandlerTests
         Assert.Equal(TipoError.Validacion, resultado.Error!.Tipo);
         Assert.Equal(codigo, resultado.Error.Codigo);
         Assert.Empty(_repo.Clientes);
+        Assert.Empty(_auditoria.Registros);
     }
 
     [Fact]

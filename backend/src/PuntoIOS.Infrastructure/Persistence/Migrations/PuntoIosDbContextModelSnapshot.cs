@@ -22,6 +22,47 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("PuntoIOS.Domain.Auditoria.RegistroAuditoria", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Accion")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("accion");
+
+                    b.Property<string>("Entidad")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("entidad");
+
+                    b.Property<Guid>("EntidadId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("entidad_id");
+
+                    b.Property<DateTimeOffset>("Fecha")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha");
+
+                    b.Property<Guid>("LocalId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("local_id");
+
+                    b.Property<Guid?>("UsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LocalId", "Entidad", "EntidadId", "Fecha");
+
+                    b.ToTable("auditoria", (string)null);
+                });
+
             modelBuilder.Entity("PuntoIOS.Domain.Clientes.Cliente", b =>
                 {
                     b.Property<Guid>("Id")
@@ -130,6 +171,11 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         {
                             Codigo = "clientes.crear",
                             Descripcion = "Registrar clientes nuevos"
+                        },
+                        new
+                        {
+                            Codigo = "clientes.editar",
+                            Descripcion = "Editar los datos de un cliente"
                         });
                 });
 
@@ -231,6 +277,11 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         },
                         new
                         {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000001"),
+                            PermisoCodigo = "clientes.editar"
+                        },
+                        new
+                        {
                             RolId = new Guid("0195a000-0000-7000-8000-000000000002"),
                             PermisoCodigo = "clientes.ver"
                         },
@@ -238,6 +289,11 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         {
                             RolId = new Guid("0195a000-0000-7000-8000-000000000002"),
                             PermisoCodigo = "clientes.crear"
+                        },
+                        new
+                        {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000002"),
+                            PermisoCodigo = "clientes.editar"
                         },
                         new
                         {
@@ -320,6 +376,37 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                             Id = new Guid("0195a000-0000-7000-8000-0000000000a1"),
                             Nombre = "Punto iOS"
                         });
+                });
+
+            modelBuilder.Entity("PuntoIOS.Domain.Auditoria.RegistroAuditoria", b =>
+                {
+                    b.OwnsMany("PuntoIOS.Domain.Auditoria.CambioDeCampo", "Cambios", b1 =>
+                        {
+                            b1.Property<Guid>("RegistroAuditoriaId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<string>("Anterior");
+
+                            b1.Property<string>("Campo")
+                                .IsRequired();
+
+                            b1.Property<string>("Nuevo");
+
+                            b1.HasKey("RegistroAuditoriaId", "__synthesizedOrdinal");
+
+                            b1.ToTable("auditoria");
+
+                            b1
+                                .ToJson("cambios")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("RegistroAuditoriaId");
+                        });
+
+                    b.Navigation("Cambios");
                 });
 
             modelBuilder.Entity("PuntoIOS.Domain.Clientes.Cliente", b =>

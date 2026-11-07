@@ -2,8 +2,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PuntoIOS.Application.Common.Pagination;
 using PuntoIOS.Application.Features.Clientes;
+using PuntoIOS.Application.Features.Clientes.ActualizarCliente;
 using PuntoIOS.Application.Features.Clientes.BuscarClientes;
 using PuntoIOS.Application.Features.Clientes.CrearCliente;
+using PuntoIOS.Application.Features.Clientes.HistorialCliente;
 using PuntoIOS.Application.Features.Clientes.ObtenerCliente;
 using PuntoIOS.Domain.Identidad;
 
@@ -18,12 +20,23 @@ public sealed record CrearClienteRequest(
     string? Observaciones,
     bool PermitirDuplicado = false);
 
+public sealed record ActualizarClienteRequest(
+    string? Nombre,
+    string? Apellido,
+    string? Telefono,
+    string? Email,
+    string? Direccion,
+    string? Observaciones,
+    bool PermitirDuplicado = false);
+
 [ApiController]
 [Route("api/v1/clientes")]
 public sealed class ClientesController(
     BuscarClientesHandler buscar,
     ObtenerClienteHandler obtener,
-    CrearClienteHandler crear) : ControllerBase
+    CrearClienteHandler crear,
+    ActualizarClienteHandler actualizar,
+    HistorialClienteHandler historial) : ControllerBase
 {
     /// <summary>Lista paginada. <c>q</c> busca por nombre, apellido, email o teléfono.</summary>
     [HttpGet]
@@ -61,5 +74,38 @@ public sealed class ClientesController(
         return resultado.EsExitoso
             ? CreatedAtAction(nameof(Obtener), new { id = resultado.Valor!.Id }, resultado.Valor)
             : resultado.Error!.ToProblem();
+    }
+
+    /// <summary>Reemplaza los datos editables del cliente. Registra en el historial lo que cambió.</summary>
+    [HttpPut("{id:guid}")]
+    [Authorize(Policy = Permisos.ClientesEditar)]
+    public async Task<ActionResult<ClienteDto>> Actualizar(Guid id, ActualizarClienteRequest request, CancellationToken ct)
+    {
+        var resultado = await actualizar.HandleAsync(
+            new ActualizarClienteCommand(
+                id,
+                request.Nombre,
+                request.Apellido,
+                request.Telefono,
+                request.Email,
+                request.Direccion,
+                request.Observaciones,
+                request.PermitirDuplicado),
+            ct);
+
+        return resultado.EsExitoso ? Ok(resultado.Valor) : resultado.Error!.ToProblem();
+    }
+
+    /// <summary>Historial de cambios del cliente, del más reciente al más antiguo.</summary>
+    [HttpGet("{id:guid}/historial")]
+    [Authorize(Policy = Permisos.ClientesVer)]
+    public async Task<ActionResult<PagedResult<RegistroHistorialDto>>> Historial(
+        Guid id,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = PageRequest.DefaultPageSize,
+        CancellationToken ct = default)
+    {
+        var resultado = await historial.HandleAsync(id, new PageRequest(page, pageSize), ct);
+        return resultado.EsExitoso ? Ok(resultado.Valor) : resultado.Error!.ToProblem();
     }
 }

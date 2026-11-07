@@ -35,6 +35,14 @@ internal sealed class ClienteConfiguration : IEntityTypeConfiguration<Cliente>
         builder.Property(c => c.Observaciones).HasColumnName("observaciones").HasMaxLength(Cliente.LargoMaximoObservaciones);
         builder.Property(c => c.CreadoPorUsuarioId).HasColumnName("creado_por_usuario_id");
         builder.Property(c => c.CreadoEn).HasColumnName("creado_en");
+        builder.Property(c => c.CodigoSeguimientoHuella).HasColumnName("codigo_seguimiento_huella").HasMaxLength(64);
+        builder.Property(c => c.CodigoSeguimientoCifrado).HasColumnName("codigo_seguimiento_cifrado").HasMaxLength(500);
+        builder.Property(c => c.CodigoSeguimientoGeneradoEn).HasColumnName("codigo_seguimiento_generado_en");
+
+        // El portal busca al cliente por la huella del código: única en todo el sistema.
+        builder.HasIndex(c => c.CodigoSeguimientoHuella)
+            .IsUnique()
+            .HasFilter("codigo_seguimiento_huella IS NOT NULL");
 
         // Un teléfono puede repetirse a propósito (familiares), por eso el índice no es único.
         builder.HasIndex(c => new { c.LocalId, c.TelefonoNormalizado });

@@ -16,6 +16,14 @@ public static class AccionesAuditadas
 
     /// <summary>Alguien vio el IMEI o número de serie completo de un equipo.</summary>
     public const string ImeiConsultado = "imei_consultado";
+
+    public const string CodigoGenerado = "codigo_generado";
+
+    /// <summary>Se generó un código nuevo y el anterior dejó de funcionar.</summary>
+    public const string CodigoRegenerado = "codigo_regenerado";
+
+    /// <summary>Alguien del personal vio o envió el código de seguimiento.</summary>
+    public const string CodigoConsultado = "codigo_consultado";
 }
 
 /// <summary>

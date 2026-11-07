@@ -25,7 +25,7 @@ public class UsuariosEndpointTests(PostgresFixture postgres) : IClassFixture<Pos
             roles.Single(r => r.Id == RolesDeSistema.TecnicoId).Permisos);
         Assert.Equal(
             [
-                Permisos.ClientesCrear, Permisos.ClientesEditar, Permisos.ClientesVer,
+                Permisos.ClientesCrear, Permisos.ClientesEditar, Permisos.ClientesSeguimiento, Permisos.ClientesVer,
                 Permisos.DispositivosCrear, Permisos.DispositivosEditar, Permisos.DispositivosVer, Permisos.DispositivosVerImei,
             ],
             roles.Single(r => r.Id == RolesDeSistema.RecepcionVentasId).Permisos);

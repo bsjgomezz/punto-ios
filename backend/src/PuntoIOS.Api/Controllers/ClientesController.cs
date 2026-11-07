@@ -8,6 +8,7 @@ using PuntoIOS.Application.Features.Clientes.BuscarClientes;
 using PuntoIOS.Application.Features.Clientes.CrearCliente;
 using PuntoIOS.Application.Features.Clientes.HistorialCliente;
 using PuntoIOS.Application.Features.Clientes.ObtenerCliente;
+using PuntoIOS.Application.Features.Clientes.SeguimientoCliente;
 using PuntoIOS.Domain.Identidad;
 
 namespace PuntoIOS.Api.Controllers;
@@ -46,7 +47,9 @@ public sealed class ClientesController(
     ObtenerClienteHandler obtener,
     CrearClienteHandler crear,
     ActualizarClienteHandler actualizar,
-    HistorialClienteHandler historial) : ControllerBase
+    HistorialClienteHandler historial,
+    GenerarCodigoSeguimientoHandler generarCodigo,
+    ConsultarCodigoSeguimientoHandler consultarCodigo) : ControllerBase
 {
     /// <summary>Lista paginada. <c>q</c> busca por nombre, apellido, email o teléfono.</summary>
     [HttpGet]
@@ -117,6 +120,24 @@ public sealed class ClientesController(
         CancellationToken ct = default)
     {
         var resultado = await historial.HandleAsync(id, new PageRequest(page, pageSize), ct);
+        return resultado.EsExitoso ? Ok(resultado.Valor) : resultado.Error!.ToProblem();
+    }
+
+    /// <summary>Genera el código de seguimiento, o lo regenera (el anterior deja de funcionar).</summary>
+    [HttpPost("{id:guid}/seguimiento")]
+    [Authorize(Policy = Permisos.ClientesSeguimiento)]
+    public async Task<ActionResult<CodigoSeguimientoDto>> GenerarCodigo(Guid id, CancellationToken ct)
+    {
+        var resultado = await generarCodigo.HandleAsync(id, ct);
+        return resultado.EsExitoso ? Ok(resultado.Valor) : resultado.Error!.ToProblem();
+    }
+
+    /// <summary>Código vigente para verlo o enviarlo. Es POST porque deja registrado quién lo consultó.</summary>
+    [HttpPost("{id:guid}/seguimiento/consultar")]
+    [Authorize(Policy = Permisos.ClientesSeguimiento)]
+    public async Task<ActionResult<CodigoSeguimientoDto>> ConsultarCodigo(Guid id, CancellationToken ct)
+    {
+        var resultado = await consultarCodigo.HandleAsync(id, ct);
         return resultado.EsExitoso ? Ok(resultado.Valor) : resultado.Error!.ToProblem();
     }
 }

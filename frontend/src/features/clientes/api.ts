@@ -9,6 +9,8 @@ export type Cliente = {
   direccion: string | null;
   observaciones: string | null;
   creadoEn: string;
+  /** Fecha en que se generó el código de seguimiento vigente (el código en sí nunca viene acá). */
+  codigoSeguimientoGeneradoEn?: string | null;
 };
 
 export type Coincidencia = Pick<Cliente, "id" | "nombre" | "apellido" | "telefono">;

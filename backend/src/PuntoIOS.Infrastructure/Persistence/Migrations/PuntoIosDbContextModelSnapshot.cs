@@ -75,6 +75,20 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("apellido");
 
+                    b.Property<string>("CodigoSeguimientoCifrado")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("codigo_seguimiento_cifrado");
+
+                    b.Property<DateTimeOffset?>("CodigoSeguimientoGeneradoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("codigo_seguimiento_generado_en");
+
+                    b.Property<string>("CodigoSeguimientoHuella")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("codigo_seguimiento_huella");
+
                     b.Property<DateTimeOffset>("CreadoEn")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("creado_en");
@@ -121,6 +135,10 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         .HasColumnName("telefono_normalizado");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CodigoSeguimientoHuella")
+                        .IsUnique()
+                        .HasFilter("codigo_seguimiento_huella IS NOT NULL");
 
                     b.HasIndex("LocalId", "TelefonoNormalizado");
 
@@ -243,6 +261,11 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         {
                             Codigo = "clientes.editar",
                             Descripcion = "Editar los datos de un cliente"
+                        },
+                        new
+                        {
+                            Codigo = "clientes.seguimiento",
+                            Descripcion = "Ver, enviar y regenerar el código de seguimiento del cliente (queda registrado)"
                         },
                         new
                         {
@@ -370,6 +393,11 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         new
                         {
                             RolId = new Guid("0195a000-0000-7000-8000-000000000001"),
+                            PermisoCodigo = "clientes.seguimiento"
+                        },
+                        new
+                        {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000001"),
                             PermisoCodigo = "dispositivos.ver"
                         },
                         new
@@ -401,6 +429,11 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         {
                             RolId = new Guid("0195a000-0000-7000-8000-000000000002"),
                             PermisoCodigo = "clientes.editar"
+                        },
+                        new
+                        {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000002"),
+                            PermisoCodigo = "clientes.seguimiento"
                         },
                         new
                         {

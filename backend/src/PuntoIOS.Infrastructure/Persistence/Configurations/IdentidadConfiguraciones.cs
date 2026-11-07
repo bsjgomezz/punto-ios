@@ -52,7 +52,7 @@ internal sealed class RolPermisoConfiguration : IEntityTypeConfiguration<RolPerm
         // Permisos iniciales por rol (editables luego). El Administrador tiene todo el catálogo.
         var recepcion = new[]
         {
-            Permisos.ClientesVer, Permisos.ClientesCrear, Permisos.ClientesEditar,
+            Permisos.ClientesVer, Permisos.ClientesCrear, Permisos.ClientesEditar, Permisos.ClientesSeguimiento,
             Permisos.DispositivosVer, Permisos.DispositivosCrear, Permisos.DispositivosEditar, Permisos.DispositivosVerImei,
         };
 

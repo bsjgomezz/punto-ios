@@ -1,11 +1,14 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using PuntoIOS.Api.Authentication;
+using PuntoIOS.Api.Seguridad;
 using PuntoIOS.Application.Common.Security;
 using PuntoIOS.Application.Features.Clientes.ActualizarCliente;
 using PuntoIOS.Application.Features.Clientes.BuscarClientes;
 using PuntoIOS.Application.Features.Clientes.CrearCliente;
 using PuntoIOS.Application.Features.Clientes.HistorialCliente;
 using PuntoIOS.Application.Features.Clientes.ObtenerCliente;
+using PuntoIOS.Application.Features.Clientes.SeguimientoCliente;
 using PuntoIOS.Application.Features.Dispositivos.ActualizarDispositivo;
 using PuntoIOS.Application.Features.Dispositivos.CrearDispositivo;
 using PuntoIOS.Application.Features.Dispositivos.HistorialDispositivo;
@@ -29,6 +32,8 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<ICurrentUserAccessor, HttpContextCurrentUserAccessor>();
+        services.AddDataProtection().SetApplicationName("PuntoIOS");
+        services.AddSingleton<ICifradoDeDatos, CifradoConDataProtection>();
         services.AddScoped<IdentificarUsuarioHandler>();
         services.AddScoped<ObtenerUsuarioActualHandler>();
         services.AddScoped<ListarUsuariosHandler>();
@@ -40,6 +45,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ObtenerClienteHandler>();
         services.AddScoped<ActualizarClienteHandler>();
         services.AddScoped<HistorialClienteHandler>();
+        services.AddScoped<GenerarCodigoSeguimientoHandler>();
+        services.AddScoped<ConsultarCodigoSeguimientoHandler>();
         services.AddScoped<ListarDispositivosHandler>();
         services.AddScoped<ObtenerDispositivoHandler>();
         services.AddScoped<CrearDispositivoHandler>();

@@ -32,6 +32,9 @@ public sealed class TestApi : IDisposable
 
     private TestApi(WebApplicationFactory<Program> factory) => _factory = factory;
 
+    /// <summary>Servicios de la API, para revisar directamente lo que quedó guardado en la base.</summary>
+    public IServiceProvider Servicios => _factory.Services;
+
     public static async Task<TestApi> CrearAsync(PostgresFixture postgres)
     {
         var cadena = await postgres.CrearBaseDeDatosAsync();

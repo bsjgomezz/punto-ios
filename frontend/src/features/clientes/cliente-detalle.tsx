@@ -15,6 +15,7 @@ import {
 } from "./api";
 import { EquiposCliente } from "@/features/dispositivos/equipos-cliente";
 import { ClienteForm } from "./cliente-form";
+import { SeguimientoCliente } from "./seguimiento-cliente";
 
 type Datos =
   | { clave: string; kind: "listo"; cliente: Cliente; historial: RegistroHistorial[] }
@@ -29,6 +30,14 @@ const ETIQUETAS: Record<string, string> = {
   email: "Email",
   direccion: "Dirección",
   observaciones: "Observaciones",
+};
+
+const ACCIONES: Record<string, string> = {
+  creado: "Cliente creado",
+  editado: "Datos editados",
+  codigo_generado: "Código de seguimiento generado",
+  codigo_regenerado: "Código de seguimiento regenerado",
+  codigo_consultado: "Código de seguimiento consultado o enviado",
 };
 
 const formatoFecha = new Intl.DateTimeFormat("es-AR", { dateStyle: "medium", timeStyle: "short" });
@@ -173,6 +182,10 @@ export function ClienteDetalle({ id }: { id: string }) {
 
           {permisos.includes("dispositivos.ver") && <EquiposCliente clienteId={id} permisos={permisos} />}
 
+          {permisos.includes("clientes.seguimiento") && (
+            <SeguimientoCliente cliente={cliente} onCambio={() => setRecarga((n) => n + 1)} />
+          )}
+
           <section aria-label="Historial de cambios" className="history">
             <h2 className="client-form-title">Historial de cambios</h2>
             {datos.historial.length === 0 ? (
@@ -182,7 +195,7 @@ export function ClienteDetalle({ id }: { id: string }) {
                 {datos.historial.map((r) => (
                   <li key={r.id} className="history-item">
                     <p className="history-head">
-                      <strong>{r.accion === "creado" ? "Cliente creado" : "Datos editados"}</strong>
+                      <strong>{ACCIONES[r.accion] ?? r.accion}</strong>
                       <span className="client-meta">
                         {r.usuario ? ` por ${r.usuario}` : ""} · {fecha(r.fecha)}
                       </span>

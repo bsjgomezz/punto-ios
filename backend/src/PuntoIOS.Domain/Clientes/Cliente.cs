@@ -43,6 +43,31 @@ public sealed class Cliente
 
     public DateTimeOffset CreadoEn { get; private set; }
 
+    /// <summary>Huella del código de seguimiento vigente (null si nunca se generó).</summary>
+    public string? CodigoSeguimientoHuella { get; private set; }
+
+    /// <summary>Código de seguimiento cifrado, para poder volver a mostrarlo al personal autorizado.</summary>
+    public string? CodigoSeguimientoCifrado { get; private set; }
+
+    public DateTimeOffset? CodigoSeguimientoGeneradoEn { get; private set; }
+
+    /// <summary>
+    /// Asigna un código nuevo. Si ya tenía uno, el anterior deja de funcionar. Devuelve si fue una regeneración.
+    /// </summary>
+    public bool AsignarCodigoSeguimiento(string huella, string cifrado, DateTimeOffset ahora)
+    {
+        if (string.IsNullOrWhiteSpace(huella) || string.IsNullOrWhiteSpace(cifrado))
+        {
+            throw new ArgumentException("El código de seguimiento es obligatorio.");
+        }
+
+        var regenerado = CodigoSeguimientoHuella is not null;
+        CodigoSeguimientoHuella = huella;
+        CodigoSeguimientoCifrado = cifrado;
+        CodigoSeguimientoGeneradoEn = ahora;
+        return regenerado;
+    }
+
     /// <summary>Deja solo los dígitos y conserva los últimos 10, para que "+54 9 3498 12-3456" y "3498123456" coincidan.</summary>
     public static string NormalizarTelefono(string? telefono)
     {

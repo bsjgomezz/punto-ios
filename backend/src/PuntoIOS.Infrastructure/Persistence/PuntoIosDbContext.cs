@@ -4,6 +4,8 @@ using PuntoIOS.Domain.Auditoria;
 using PuntoIOS.Domain.Clientes;
 using PuntoIOS.Domain.Identidad;
 using PuntoIOS.Domain.Locales;
+using PuntoIOS.Domain.Reparaciones;
+using PuntoIOS.Infrastructure.Persistence.Configurations;
 
 namespace PuntoIOS.Infrastructure.Persistence;
 
@@ -24,6 +26,8 @@ public sealed class PuntoIosDbContext(DbContextOptions<PuntoIosDbContext> option
 
     public DbSet<Dispositivo> Dispositivos => Set<Dispositivo>();
 
+    public DbSet<OrdenReparacion> OrdenesReparacion => Set<OrdenReparacion>();
+
     public DbSet<RegistroAuditoria> Auditoria => Set<RegistroAuditoria>();
 
     /// <summary>Local de la solicitud actual; lo usa el filtro global de las entidades operativas.</summary>
@@ -31,11 +35,13 @@ public sealed class PuntoIosDbContext(DbContextOptions<PuntoIosDbContext> option
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasSequence<long>(OrdenReparacionConfiguration.SecuenciaNumero).StartsAt(1);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(PuntoIosDbContext).Assembly);
 
         // Filtro por local aplicado de forma centralizada a toda entidad operativa.
         modelBuilder.Entity<Cliente>().HasQueryFilter(c => c.LocalId == LocalActualId);
         modelBuilder.Entity<Dispositivo>().HasQueryFilter(d => d.LocalId == LocalActualId);
+        modelBuilder.Entity<OrdenReparacion>().HasQueryFilter(o => o.LocalId == LocalActualId);
         modelBuilder.Entity<RegistroAuditoria>().HasQueryFilter(r => r.LocalId == LocalActualId);
     }
 }

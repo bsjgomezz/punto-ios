@@ -30,15 +30,15 @@ Backend ASP.NET Core con solución por capas, frontend Next.js (TS estricto), Po
 **Pruebas:** token inválido/expirado, acceso sin permiso por rol, matriz de autorización.
 **Aceptación:** el usuario inicia sesión y accede solo a lo que su rol permite.
 
-### Fase 3 — Clientes y dispositivos
+### Fase 3 — Clientes y dispositivos ✅
 - S4 Crear/buscar cliente (nombre, apellido, teléfono obligatorios; email, dirección, observaciones opcionales; duplicados por teléfono). ✅ *(backend 99/99, frontend 43/43; verificado a mano)*
 - S5 Listado paginado, filtros, detalle y edición con historial. ✅ *(tabla `auditoria` con cambios campo a campo y quién/cuándo; permiso `clientes.editar` para Administrador y Recepción. Backend 114/114, frontend 48/48; verificado a mano. Pendiente: búsqueda sin distinguir acentos, control de concurrencia en ediciones simultáneas)*
 - S6 Dispositivos del cliente (marca, modelo, almacenamiento, color, IMEI/serie protegido). ✅ *(IMEI enmascarado en listados; ver completo con `dispositivos.ver_imei` (Admin, Recepción y Técnico) y cada consulta queda en el historial; IMEI repetido bloqueado, con índice único en la base; dígito verificador de Luhn para IMEI de 15 dígitos. Backend 145/145, frontend 53/53. Pendiente: transferir un equipo a otro cliente)*
-- S7 Código de seguimiento seguro por cliente (generación, regeneración). *(en verificación: 26 caracteres CSPRNG en Base32 de Crockford + 2 de control (módulo 37); se guarda huella SHA-256 con índice único y el código cifrado con Data Protection; ver/enviar/regenerar con `clientes.seguimiento` (Admin y Recepción), todo auditado; envío por WhatsApp. La página pública `/seguimiento/{código}` es provisoria hasta el portal)*
+- S7 Código de seguimiento seguro por cliente (generación, regeneración). ✅ *(26 caracteres CSPRNG en Base32 de Crockford + 2 de control (módulo 37); se guarda huella SHA-256 con índice único y el código cifrado con Data Protection; ver/enviar/regenerar con `clientes.seguimiento` (Admin y Recepción), todo auditado; envío por WhatsApp. La página pública `/seguimiento/{código}` es provisoria hasta el portal)*
 **Aceptación:** gestionar clientes y dispositivos sin perder historial.
 
 ### Fase 4 — Recepción de reparaciones
-- S8 Crear orden (cliente, dispositivo, problema informado, técnico, tipo de reparación).
+- S8 Crear orden (cliente, dispositivo, problema informado, técnico, tipo de reparación). *(en verificación: número correlativo desde 1 con secuencia de PostgreSQL; equipo existente o nuevo en la misma operación; tipos de reparación múltiples; técnico opcional entre quienes tienen `reparaciones.reparar`; fecha estimada con aviso de que es orientativa; desbloqueo PIN/contraseña/patrón cifrado, visible solo con `reparaciones.ver_desbloqueo` (Técnico y Admin) y auditado; se borra al entregar (S10))*
 - S9 Checklist de ingreso opcional y fotos (validación de archivos).
 - S10 Máquina de estados con transiciones controladas y auditoría.
 - S11 Listados y bandeja por rol (técnico ve asignadas).

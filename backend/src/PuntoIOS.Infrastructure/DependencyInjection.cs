@@ -5,6 +5,7 @@ using PuntoIOS.Application.Features.Auditoria.Puertos;
 using PuntoIOS.Application.Features.Clientes.Puertos;
 using PuntoIOS.Application.Features.Dispositivos.Puertos;
 using PuntoIOS.Application.Features.Identidad.Puertos;
+using PuntoIOS.Application.Features.Reparaciones.Puertos;
 using PuntoIOS.Infrastructure.Persistence;
 
 namespace PuntoIOS.Infrastructure;
@@ -30,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<IRolRepositorio, RolRepositorio>();
         services.AddScoped<IClienteRepositorio, ClienteRepositorio>();
         services.AddScoped<IDispositivoRepositorio, DispositivoRepositorio>();
+        services.AddScoped<IOrdenReparacionRepositorio, OrdenReparacionRepositorio>();
         services.AddScoped<IAuditoriaRepositorio, AuditoriaRepositorio>();
         services.AddScoped<IDirectorioDeUsuarios, DirectorioDeUsuarios>();
         services.AddSingleton<ILocalActual, LocalUnico>();

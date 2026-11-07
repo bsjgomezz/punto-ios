@@ -12,6 +12,12 @@ internal sealed class ClienteRepositorio(PuntoIosDbContext db) : IClienteReposit
     public Task<Cliente?> ObtenerPorIdAsync(Guid id, CancellationToken ct) =>
         db.Clientes.FirstOrDefaultAsync(c => c.Id == id, ct);
 
+    public async Task<IReadOnlyList<Cliente>> ObtenerPorIdsAsync(IEnumerable<Guid> ids, CancellationToken ct)
+    {
+        var lista = ids.ToList();
+        return await db.Clientes.Where(c => lista.Contains(c.Id)).ToListAsync(ct);
+    }
+
     public async Task<IReadOnlyList<Cliente>> BuscarPorTelefonoAsync(string telefonoNormalizado, CancellationToken ct) =>
         await db.Clientes
             .Where(c => c.TelefonoNormalizado == telefonoNormalizado)

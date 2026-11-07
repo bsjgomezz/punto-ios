@@ -54,10 +54,16 @@ internal sealed class RolPermisoConfiguration : IEntityTypeConfiguration<RolPerm
         {
             Permisos.ClientesVer, Permisos.ClientesCrear, Permisos.ClientesEditar, Permisos.ClientesSeguimiento,
             Permisos.DispositivosVer, Permisos.DispositivosCrear, Permisos.DispositivosEditar, Permisos.DispositivosVerImei,
+            Permisos.ReparacionesVer, Permisos.ReparacionesCrear,
         };
 
         // El técnico ve el IMEI completo para chequear bloqueos (iCloud, denuncias); cada consulta queda registrada.
-        var tecnico = new[] { Permisos.ClientesVer, Permisos.DispositivosVer, Permisos.DispositivosVerImei };
+        // El desbloqueo lo carga recepción al recibir el equipo, pero solo lo ven quienes reparan (y el administrador).
+        var tecnico = new[]
+        {
+            Permisos.ClientesVer, Permisos.DispositivosVer, Permisos.DispositivosVerImei,
+            Permisos.ReparacionesVer, Permisos.ReparacionesReparar, Permisos.ReparacionesVerDesbloqueo,
+        };
 
         builder.HasData(
             Permisos.Catalogo.Keys.Select(c => new RolPermiso(RolesDeSistema.AdministradorId, c))

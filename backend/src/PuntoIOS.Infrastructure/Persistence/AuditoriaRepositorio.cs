@@ -40,4 +40,11 @@ internal sealed class DirectorioDeUsuarios(PuntoIosDbContext db) : IDirectorioDe
             .Where(u => ids.Contains(u.Id))
             .ToDictionaryAsync(u => u.Id, u => u.Nombre, ct);
     }
+
+    public async Task<IReadOnlyList<UsuarioResumen>> ListarActivosConPermisoAsync(string permiso, CancellationToken ct) =>
+        await db.Usuarios
+            .Where(u => u.Activo && db.RolesPermisos.Any(rp => rp.RolId == u.RolId && rp.PermisoCodigo == permiso))
+            .OrderBy(u => u.Nombre)
+            .Select(u => new UsuarioResumen(u.Id, u.Nombre))
+            .ToListAsync(ct);
 }

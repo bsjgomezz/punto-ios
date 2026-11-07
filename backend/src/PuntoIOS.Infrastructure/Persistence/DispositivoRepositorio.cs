@@ -9,6 +9,12 @@ internal sealed class DispositivoRepositorio(PuntoIosDbContext db) : IDispositiv
     public Task<Dispositivo?> ObtenerPorIdAsync(Guid id, CancellationToken ct) =>
         db.Dispositivos.FirstOrDefaultAsync(d => d.Id == id, ct);
 
+    public async Task<IReadOnlyList<Dispositivo>> ObtenerPorIdsAsync(IEnumerable<Guid> ids, CancellationToken ct)
+    {
+        var lista = ids.ToList();
+        return await db.Dispositivos.Where(d => lista.Contains(d.Id)).ToListAsync(ct);
+    }
+
     public async Task<IReadOnlyList<Dispositivo>> ListarPorClienteAsync(Guid clienteId, CancellationToken ct) =>
         await db.Dispositivos
             .Where(d => d.ClienteId == clienteId)

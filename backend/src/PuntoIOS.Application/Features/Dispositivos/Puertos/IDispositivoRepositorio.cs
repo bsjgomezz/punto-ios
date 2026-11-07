@@ -7,6 +7,8 @@ public interface IDispositivoRepositorio
 {
     Task<Dispositivo?> ObtenerPorIdAsync(Guid id, CancellationToken ct);
 
+    Task<IReadOnlyList<Dispositivo>> ObtenerPorIdsAsync(IEnumerable<Guid> ids, CancellationToken ct);
+
     /// <summary>Equipos de un cliente, del más reciente al más antiguo.</summary>
     Task<IReadOnlyList<Dispositivo>> ListarPorClienteAsync(Guid clienteId, CancellationToken ct);
 

@@ -17,6 +17,10 @@ public static class Permisos
     public const string DispositivosCrear = "dispositivos.crear";
     public const string DispositivosEditar = "dispositivos.editar";
     public const string DispositivosVerImei = "dispositivos.ver_imei";
+    public const string ReparacionesVer = "reparaciones.ver";
+    public const string ReparacionesCrear = "reparaciones.crear";
+    public const string ReparacionesReparar = "reparaciones.reparar";
+    public const string ReparacionesVerDesbloqueo = "reparaciones.ver_desbloqueo";
 
     /// <summary>Todos los permisos con su descripción (se siembran en la base de datos).</summary>
     public static readonly IReadOnlyDictionary<string, string> Catalogo = new Dictionary<string, string>
@@ -32,5 +36,9 @@ public static class Permisos
         [DispositivosCrear] = "Registrar equipos de clientes",
         [DispositivosEditar] = "Editar los datos de un equipo",
         [DispositivosVerImei] = "Ver el IMEI o número de serie completo (queda registrado)",
+        [ReparacionesVer] = "Ver las órdenes de reparación",
+        [ReparacionesCrear] = "Recibir equipos y crear órdenes de reparación",
+        [ReparacionesReparar] = "Trabajar en reparaciones (se le pueden asignar órdenes)",
+        [ReparacionesVerDesbloqueo] = "Ver el código o patrón de desbloqueo del equipo (queda registrado)",
     };
 }

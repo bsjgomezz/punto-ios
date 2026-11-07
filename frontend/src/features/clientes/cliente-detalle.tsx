@@ -14,6 +14,7 @@ import {
   type RegistroHistorial,
 } from "./api";
 import { EquiposCliente } from "@/features/dispositivos/equipos-cliente";
+import { OrdenesCliente } from "@/features/reparaciones/ordenes-cliente";
 import { ClienteForm } from "./cliente-form";
 import { SeguimientoCliente } from "./seguimiento-cliente";
 
@@ -178,6 +179,10 @@ export function ClienteDetalle({ id }: { id: string }) {
                 </button>
               )}
             </section>
+          )}
+
+          {permisos.includes("reparaciones.ver") && (
+            <OrdenesCliente cliente={cliente} puedeRecibir={permisos.includes("reparaciones.crear")} />
           )}
 
           {permisos.includes("dispositivos.ver") && <EquiposCliente clienteId={id} permisos={permisos} />}

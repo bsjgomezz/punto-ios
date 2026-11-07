@@ -17,13 +17,17 @@ export default function PanelPage() {
 
         <h1 className="page-title">Panel</h1>
         <p className="hero-lead">
-          Todavía no hay datos. Los clientes y las reparaciones se van a gestionar desde acá.
+          Recibí equipos, seguí las reparaciones y encontrá a tus clientes.
         </p>
 
         <nav className="panel-nav" aria-label="Secciones">
           <Link href="/clientes" className="panel-link">
             <span className="panel-link-name">Clientes</span>
             <span className="panel-link-hint">Buscar y registrar clientes</span>
+          </Link>
+          <Link href="/reparaciones" className="panel-link">
+            <span className="panel-link-name">Reparaciones</span>
+            <span className="panel-link-hint">Recibir equipos y ver las órdenes</span>
           </Link>
         </nav>
 

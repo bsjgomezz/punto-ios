@@ -4,4 +4,9 @@ namespace PuntoIOS.Application.Features.Identidad.Puertos;
 public interface IDirectorioDeUsuarios
 {
     Task<IReadOnlyDictionary<Guid, string>> ObtenerNombresAsync(IEnumerable<Guid> usuarioIds, CancellationToken ct);
+
+    /// <summary>Usuarios activos cuyo rol tiene el permiso indicado, ordenados por nombre.</summary>
+    Task<IReadOnlyList<UsuarioResumen>> ListarActivosConPermisoAsync(string permiso, CancellationToken ct);
 }
+
+public sealed record UsuarioResumen(Guid Id, string Nombre);

@@ -16,6 +16,9 @@ using PuntoIOS.Application.Features.Dispositivos.ListarDispositivos;
 using PuntoIOS.Application.Features.Dispositivos.ObtenerDispositivo;
 using PuntoIOS.Application.Features.Dispositivos.RevelarImei;
 using PuntoIOS.Application.Features.Identidad.ActualizarUsuario;
+using PuntoIOS.Application.Features.Reparaciones.ConsultarOrdenes;
+using PuntoIOS.Application.Features.Reparaciones.RecibirEquipo;
+using PuntoIOS.Application.Features.Reparaciones.VerDesbloqueo;
 using PuntoIOS.Application.Features.Identidad.IdentificarUsuario;
 using PuntoIOS.Application.Features.Identidad.ListarRoles;
 using PuntoIOS.Application.Features.Identidad.ListarUsuarios;
@@ -53,6 +56,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ActualizarDispositivoHandler>();
         services.AddScoped<RevelarImeiHandler>();
         services.AddScoped<HistorialDispositivoHandler>();
+        services.AddScoped<RecibirEquipoHandler>();
+        services.AddScoped<ObtenerOrdenHandler>();
+        services.AddScoped<ListarOrdenesHandler>();
+        services.AddScoped<ListarTecnicosHandler>();
+        services.AddScoped<VerDesbloqueoHandler>();
+        services.AddScoped<HistorialOrdenHandler>();
         return services;
     }
 

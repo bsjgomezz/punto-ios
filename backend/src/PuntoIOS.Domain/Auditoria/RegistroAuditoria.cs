@@ -7,6 +7,7 @@ public static class EntidadesAuditadas
 {
     public const string Cliente = "cliente";
     public const string Dispositivo = "dispositivo";
+    public const string Reparacion = "reparacion";
 }
 
 public static class AccionesAuditadas
@@ -24,6 +25,9 @@ public static class AccionesAuditadas
 
     /// <summary>Alguien del personal vio o envió el código de seguimiento.</summary>
     public const string CodigoConsultado = "codigo_consultado";
+
+    /// <summary>Alguien vio el código o patrón de desbloqueo de un equipo en reparación.</summary>
+    public const string DesbloqueoConsultado = "desbloqueo_consultado";
 }
 
 /// <summary>

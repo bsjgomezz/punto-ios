@@ -18,6 +18,9 @@ internal sealed class ClienteRepoEnMemoria : IClienteRepositorio
     public Task<Cliente?> ObtenerPorIdAsync(Guid id, CancellationToken ct) =>
         Task.FromResult(Clientes.FirstOrDefault(c => c.Id == id));
 
+    public Task<IReadOnlyList<Cliente>> ObtenerPorIdsAsync(IEnumerable<Guid> ids, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<Cliente>>(Clientes.Where(c => ids.Contains(c.Id)).ToList());
+
     public Task<IReadOnlyList<Cliente>> BuscarPorTelefonoAsync(string telefonoNormalizado, CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<Cliente>>(Clientes.Where(c => c.TelefonoNormalizado == telefonoNormalizado).ToList());
 
@@ -50,10 +53,14 @@ internal sealed class AuditoriaRepoEnMemoria : IAuditoriaRepositorio
     }
 }
 
-internal sealed class DirectorioFijo(Dictionary<Guid, string> nombres) : IDirectorioDeUsuarios
+internal sealed class DirectorioFijo(Dictionary<Guid, string> nombres, IReadOnlyList<UsuarioResumen>? conPermiso = null)
+    : IDirectorioDeUsuarios
 {
     public Task<IReadOnlyDictionary<Guid, string>> ObtenerNombresAsync(IEnumerable<Guid> usuarioIds, CancellationToken ct) =>
         Task.FromResult<IReadOnlyDictionary<Guid, string>>(nombres);
+
+    public Task<IReadOnlyList<UsuarioResumen>> ListarActivosConPermisoAsync(string permiso, CancellationToken ct) =>
+        Task.FromResult(conPermiso ?? []);
 }
 
 internal sealed class LocalFijo(Guid localId) : ILocalActual
@@ -75,6 +82,9 @@ internal sealed class DispositivoRepoEnMemoria : PuntoIOS.Application.Features.D
     public Task<Dispositivo?> ObtenerPorIdAsync(Guid id, CancellationToken ct) =>
         Task.FromResult(Dispositivos.FirstOrDefault(d => d.Id == id));
 
+    public Task<IReadOnlyList<Dispositivo>> ObtenerPorIdsAsync(IEnumerable<Guid> ids, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<Dispositivo>>(Dispositivos.Where(d => ids.Contains(d.Id)).ToList());
+
     public Task<IReadOnlyList<Dispositivo>> ListarPorClienteAsync(Guid clienteId, CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<Dispositivo>>(
             Dispositivos.Where(d => d.ClienteId == clienteId).OrderByDescending(d => d.CreadoEn).ToList());
@@ -83,6 +93,31 @@ internal sealed class DispositivoRepoEnMemoria : PuntoIOS.Application.Features.D
         Task.FromResult(Dispositivos.FirstOrDefault(d => d.ImeiSerie == imeiNormalizado));
 
     public void Agregar(Dispositivo dispositivo) => Dispositivos.Add(dispositivo);
+
+    public Task GuardarCambiosAsync(CancellationToken ct)
+    {
+        Guardados++;
+        return Task.CompletedTask;
+    }
+}
+
+internal sealed class OrdenRepoEnMemoria : PuntoIOS.Application.Features.Reparaciones.Puertos.IOrdenReparacionRepositorio
+{
+    public List<PuntoIOS.Domain.Reparaciones.OrdenReparacion> Ordenes { get; } = [];
+
+    public int Guardados { get; private set; }
+
+    public Task<PuntoIOS.Domain.Reparaciones.OrdenReparacion?> ObtenerPorIdAsync(Guid id, CancellationToken ct) =>
+        Task.FromResult(Ordenes.FirstOrDefault(o => o.Id == id));
+
+    public Task<PagedResult<PuntoIOS.Domain.Reparaciones.OrdenReparacion>> ListarAsync(
+        Guid? clienteId, PageRequest pagina, CancellationToken ct)
+    {
+        var items = Ordenes.Where(o => clienteId is null || o.ClienteId == clienteId).ToList();
+        return Task.FromResult(new PagedResult<PuntoIOS.Domain.Reparaciones.OrdenReparacion>(items, pagina.Page, pagina.PageSize, items.Count));
+    }
+
+    public void Agregar(PuntoIOS.Domain.Reparaciones.OrdenReparacion orden) => Ordenes.Add(orden);
 
     public Task GuardarCambiosAsync(CancellationToken ct)
     {

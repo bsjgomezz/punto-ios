@@ -788,3 +788,311 @@ a.btn {
 .btn-whatsapp:hover:not(:disabled) {
   background: #23b061;
 }
+
+/* ---------- Reparaciones ---------- */
+.panel-nav {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.field select {
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 0.55rem;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.link-button:hover,
+.link-button:focus-visible {
+  text-decoration: underline;
+}
+
+/* Bloques del formulario de recepción */
+.orden-bloque {
+  margin: 1.25rem 0 0;
+  padding: 1rem 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+.orden-bloque legend {
+  padding: 0;
+  font-family: var(--font-bricolage), system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.orden-bloque .fieldset-hint {
+  margin: 0.5rem 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  max-width: 65ch;
+}
+
+.opciones-equipo {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.6rem 0 0.9rem;
+}
+
+.opcion {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.55rem;
+  cursor: pointer;
+}
+
+.opcion:has(input:checked) {
+  border-color: var(--violet-strong);
+  background: #241d33;
+}
+
+/* Tipos de reparación y tipo de desbloqueo: chips que se marcan */
+.chips-titulo {
+  margin: 1rem 0 0.4rem;
+  font-weight: 600;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.4rem 0 0.8rem;
+}
+
+.chip {
+  position: relative;
+}
+
+.chip input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.chip span {
+  display: inline-block;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.chip input:checked + span {
+  border-color: var(--violet-strong);
+  background: var(--violet-strong);
+  color: #fff;
+}
+
+.chip input:focus-visible + span {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Patrón de desbloqueo: la grilla del celular */
+.patron-editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1rem 1.5rem;
+  margin-top: 0.6rem;
+}
+
+.patron-editor p {
+  margin: 0 0 0.6rem;
+  max-width: 30ch;
+}
+
+.patron {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  width: 168px;
+  height: 168px;
+  padding: 0;
+  border-radius: 1rem;
+  background: #100d16;
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--violet);
+}
+
+.patron-trazo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.patron-celda {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+span.patron-celda {
+  cursor: default;
+}
+
+.patron-celda:disabled {
+  cursor: default;
+}
+
+.patron-celda:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -6px;
+  border-radius: 0.6rem;
+}
+
+.patron-punto {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform 0.12s ease, background-color 0.12s ease;
+}
+
+.patron-celda[data-marcado="true"] .patron-punto {
+  background: var(--violet);
+  transform: scale(1.35);
+  box-shadow: 0 0 0 6px rgba(160, 123, 255, 0.22);
+}
+
+.patron-orden {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Detalle de la orden: el número manda */
+.orden-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-top: 1.5rem;
+}
+
+.orden-numero {
+  margin: 0;
+  font-family: var(--font-bricolage), system-ui, sans-serif;
+  font-size: clamp(2.4rem, 7vw, 3.6rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.orden-sub {
+  margin: 0.6rem 0 1.4rem;
+}
+
+.orden-sub a {
+  color: var(--violet);
+}
+
+.estado-chip {
+  display: inline-block;
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--violet-strong);
+  border-radius: 999px;
+  color: var(--violet);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.texto-largo {
+  white-space: pre-wrap;
+}
+
+.aviso-fecha {
+  display: block;
+  margin-top: 0.3rem;
+  max-width: 65ch;
+}
+
+.desbloqueo-oculto {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.desbloqueo-valor {
+  font-family: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+}
+
+/* Filas de órdenes: el número a la izquierda como en un talonario */
+.orden-row {
+  display: grid;
+  grid-template-columns: 4.2rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.25rem 1rem;
+  padding: 0.85rem 0.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.orden-row p {
+  margin: 0;
+}
+
+.orden-row-numero {
+  font-family: var(--font-bricolage), system-ui, sans-serif;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text);
+  text-decoration: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.orden-row-numero:hover,
+.orden-row-numero:focus-visible {
+  color: var(--violet);
+}
+
+@media (max-width: 520px) {
+  .orden-row {
+    grid-template-columns: 3.2rem minmax(0, 1fr);
+  }
+
+  .orden-row .estado-chip {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip span,
+  .patron-punto {
+    transition: none;
+  }
+}

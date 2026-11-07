@@ -8,6 +8,8 @@ public interface IClienteRepositorio
 {
     Task<Cliente?> ObtenerPorIdAsync(Guid id, CancellationToken ct);
 
+    Task<IReadOnlyList<Cliente>> ObtenerPorIdsAsync(IEnumerable<Guid> ids, CancellationToken ct);
+
     /// <summary>Clientes cuyo teléfono normalizado coincide (para detectar duplicados).</summary>
     Task<IReadOnlyList<Cliente>> BuscarPorTelefonoAsync(string telefonoNormalizado, CancellationToken ct);
 

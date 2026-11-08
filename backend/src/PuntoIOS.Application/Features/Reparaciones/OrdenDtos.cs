@@ -10,6 +10,8 @@ namespace PuntoIOS.Application.Features.Reparaciones;
 /// <summary>
 /// Orden completa para el personal. El desbloqueo nunca viaja acá: solo si existe y de qué tipo es.
 /// <c>EstadosDisponibles</c>: estados a los que se puede pasar desde el actual.
+/// Es la vista interna del taller: incluye <c>NotasInternas</c>, que son privadas. Un futuro DTO público para el
+/// cliente (portal de seguimiento, S18) NO debe reutilizar este record ni copiar <c>NotasInternas</c>.
 /// </summary>
 public sealed record OrdenReparacionDto(
     Guid Id,
@@ -27,7 +29,12 @@ public sealed record OrdenReparacionDto(
     DateTimeOffset CreadoEn,
     ChecklistDto Checklist,
     bool NoEnciende,
-    IReadOnlyList<string> EstadosDisponibles);
+    IReadOnlyList<string> EstadosDisponibles,
+    string? Pruebas,
+    string? Diagnostico,
+    string? Mediciones,
+    IReadOnlyList<string> ComponentesAfectados,
+    string? NotasInternas);
 
 /// <summary>Checklist de ingreso. <c>Items</c>: código → resultado (solo los revisados).</summary>
 public sealed record ChecklistDto(IReadOnlyDictionary<string, bool> Items, int? SaludBateria, string? Notas);
@@ -72,7 +79,12 @@ internal sealed class ArmadorDeOrdenes(
                 o.CreadoEn,
                 new ChecklistDto(o.ChecklistItems.ToDictionary(i => i.Codigo, i => i.Valor), o.SaludBateria, o.NotasChecklist),
                 o.NoEnciende,
-                MaquinaDeEstados.SiguientesEstados(o.Estado)))
+                MaquinaDeEstados.SiguientesEstados(o.Estado),
+                o.Pruebas,
+                o.Diagnostico,
+                o.Mediciones,
+                o.ComponentesAfectados,
+                o.NotasInternas)) // Solo para el personal: no pasar NotasInternas a un DTO público (S18).
             .ToList();
     }
 

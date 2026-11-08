@@ -693,6 +693,11 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("cliente_id");
 
+                    b.PrimitiveCollection<List<string>>("ComponentesAfectados")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("componentes_afectados");
+
                     b.Property<DateTimeOffset>("CreadoEn")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("creado_en");
@@ -710,6 +715,11 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("desbloqueo_tipo");
+
+                    b.Property<string>("Diagnostico")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("diagnostico");
 
                     b.Property<Guid>("DispositivoId")
                         .HasColumnType("uuid")
@@ -729,10 +739,20 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("local_id");
 
+                    b.Property<string>("Mediciones")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("mediciones");
+
                     b.Property<string>("NotasChecklist")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("notas_checklist");
+
+                    b.Property<string>("NotasInternas")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("notas_internas");
 
                     b.Property<long>("Numero")
                         .ValueGeneratedOnAdd()
@@ -750,6 +770,11 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("problema_informado");
+
+                    b.Property<string>("Pruebas")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("pruebas");
 
                     b.Property<int?>("SaludBateria")
                         .HasColumnType("integer")

@@ -13,6 +13,7 @@ import {
   CHECKLIST_CATALOGO,
   NOMBRES_DESBLOQUEO,
   RAZON_SIN_FECHA,
+  actualizarDatosTecnicos,
   cambiarEstadoDeOrden,
   formatearFecha,
   listarFotos,
@@ -22,6 +23,7 @@ import {
   obtenerOrden,
   subirFoto,
   verDesbloqueo,
+  type DatosTecnicos,
   type Foto,
   type Orden,
   type TipoDesbloqueo,
@@ -40,6 +42,16 @@ const ACCIONES: Record<string, string> = {
   creado: "Equipo recibido",
   desbloqueo_consultado: "Se vio el código de desbloqueo",
   estado_cambiado: "Cambió el estado",
+  editado: "Editó datos de la orden",
+};
+
+/** Nombre para mostrar de cada campo auditado de la orden (snake_case en el backend). */
+const NOMBRES_DE_CAMPO: Record<string, string> = {
+  pruebas: "Pruebas",
+  diagnostico: "Diagnóstico",
+  mediciones: "Mediciones",
+  componentes_afectados: "Componentes afectados",
+  notas_internas: "Notas internas",
 };
 
 function historialDeOrden(token: string, id: string, signal?: AbortSignal) {
@@ -50,6 +62,44 @@ function mensajeDeErrorDeEstado(error: unknown): string {
   if (error instanceof ApiError && error.status === 403) return "Tu rol no permite cambiar el estado de la orden.";
   if (error instanceof ApiError && error.problem?.title) return error.problem.title;
   return "No se pudo cambiar el estado. Verificá la conexión e intentá de nuevo.";
+}
+
+function mensajeDeErrorDeDatosTecnicos(error: unknown): string {
+  if (error instanceof ApiError && error.status === 403) return "Tu rol no permite editar los datos técnicos de la orden.";
+  if (error instanceof ApiError && error.problem?.title) return error.problem.title;
+  return "No se pudieron guardar los datos técnicos. Verificá la conexión e intentá de nuevo.";
+}
+
+/** Estado del formulario de datos técnicos: los textos van como string ("" si no hay nada). */
+type FormDatosTecnicos = {
+  pruebas: string;
+  diagnostico: string;
+  mediciones: string;
+  componentesAfectados: string[];
+  notasInternas: string;
+};
+
+function formDeOrden(orden: Orden): FormDatosTecnicos {
+  return {
+    pruebas: orden.pruebas ?? "",
+    diagnostico: orden.diagnostico ?? "",
+    mediciones: orden.mediciones ?? "",
+    componentesAfectados: orden.componentesAfectados ?? [],
+    notasInternas: orden.notasInternas ?? "",
+  };
+}
+
+const textoONull = (texto: string) => (texto.trim() === "" ? null : texto);
+
+/** El backend reemplaza los cinco campos juntos: se mandan siempre todos, tal cual están en pantalla. */
+function datosDelForm(form: FormDatosTecnicos): DatosTecnicos {
+  return {
+    pruebas: textoONull(form.pruebas),
+    diagnostico: textoONull(form.diagnostico),
+    mediciones: textoONull(form.mediciones),
+    componentesAfectados: form.componentesAfectados,
+    notasInternas: textoONull(form.notasInternas),
+  };
 }
 
 const formatoFechaHora = new Intl.DateTimeFormat("es-AR", { dateStyle: "medium", timeStyle: "short" });
@@ -91,6 +141,14 @@ function TextoDeRegistro({ registro }: { registro: Registro }) {
       </span>
     );
   }
+  if (registro.accion === "editado" && registro.cambios && registro.cambios.length > 0) {
+    const campos = registro.cambios.map((c) => NOMBRES_DE_CAMPO[c.campo] ?? c.campo).join(", ");
+    return (
+      <span>
+        Editó: <strong>{campos}</strong>
+      </span>
+    );
+  }
   return <strong>{ACCIONES[registro.accion] ?? registro.accion}</strong>;
 }
 
@@ -99,6 +157,7 @@ export function OrdenDetalle({ id }: { id: string }) {
   const me = useMe();
   const puedeVerDesbloqueo = me.kind === "listo" && me.me.permisos.includes("reparaciones.ver_desbloqueo");
   const puedeCambiarEstado = me.kind === "listo" && me.me.permisos.includes("reparaciones.cambiar_estado");
+  const puedeEditarDatosTecnicos = me.kind === "listo" && me.me.permisos.includes("reparaciones.reparar");
 
   const [estado, setEstado] = useState<Estado | null>(null);
   const [recarga, setRecarga] = useState(0);
@@ -111,6 +170,10 @@ export function OrdenDetalle({ id }: { id: string }) {
   const [estadoElegido, setEstadoElegido] = useState("");
   const [cambiandoEstado, setCambiandoEstado] = useState(false);
   const [errorEstado, setErrorEstado] = useState<string | null>(null);
+  const [datosTecnicos, setDatosTecnicos] = useState<FormDatosTecnicos | null>(null);
+  const [nuevoComponente, setNuevoComponente] = useState("");
+  const [guardandoDatosTecnicos, setGuardandoDatosTecnicos] = useState(false);
+  const [errorDatosTecnicos, setErrorDatosTecnicos] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -127,6 +190,7 @@ export function OrdenDetalle({ id }: { id: string }) {
       })
       .then(([orden, historial, listaFotos]) => {
         setEstado({ kind: "listo", orden, historial: historial.items });
+        setDatosTecnicos(formDeOrden(orden));
         setFotos(listaFotos);
       })
       .catch((error: unknown) => {
@@ -171,6 +235,46 @@ export function OrdenDetalle({ id }: { id: string }) {
       setErrorEstado(mensajeDeErrorDeEstado(error));
     } finally {
       setCambiandoEstado(false);
+    }
+  }
+
+  function agregarComponente() {
+    const componente = nuevoComponente.trim();
+    if (!componente) return;
+    setDatosTecnicos((actual) => {
+      if (!actual) return actual;
+      const yaEsta = actual.componentesAfectados.some((c) => c.toLowerCase() === componente.toLowerCase());
+      return yaEsta ? actual : { ...actual, componentesAfectados: [...actual.componentesAfectados, componente] };
+    });
+    setNuevoComponente("");
+  }
+
+  function quitarComponente(componente: string) {
+    setDatosTecnicos((actual) =>
+      actual ? { ...actual, componentesAfectados: actual.componentesAfectados.filter((c) => c !== componente) } : actual,
+    );
+  }
+
+  function cambiarTextoTecnico(campo: "pruebas" | "diagnostico" | "mediciones" | "notasInternas", valor: string) {
+    setDatosTecnicos((actual) => (actual ? { ...actual, [campo]: valor } : actual));
+  }
+
+  async function guardarDatosTecnicos() {
+    if (!datosTecnicos || !user) return;
+    setErrorDatosTecnicos(null);
+    setGuardandoDatosTecnicos(true);
+    try {
+      const t = token ?? (await user.getIdToken());
+      const actualizada = await actualizarDatosTecnicos(t, id, datosDelForm(datosTecnicos));
+      setEstado((actual) => (actual?.kind === "listo" ? { ...actual, orden: actualizada } : actual));
+      setDatosTecnicos(formDeOrden(actualizada));
+      // Si cambió algo queda en el historial: se recarga solo eso, sin pisar la orden que devolvió el backend.
+      const historial = await historialDeOrden(t, id).catch(() => null);
+      if (historial) setEstado((actual) => (actual?.kind === "listo" ? { ...actual, historial: historial.items } : actual));
+    } catch (error) {
+      setErrorDatosTecnicos(mensajeDeErrorDeDatosTecnicos(error));
+    } finally {
+      setGuardandoDatosTecnicos(false);
     }
   }
 
@@ -385,6 +489,114 @@ export function OrdenDetalle({ id }: { id: string }) {
               </dd>
             </div>
           </dl>
+
+          {puedeEditarDatosTecnicos && datosTecnicos && (
+            <section aria-label="Datos técnicos" className="history">
+              <h2 className="client-form-title">Datos técnicos</h2>
+              <div className="field">
+                <label htmlFor="dt-pruebas">Pruebas realizadas</label>
+                <textarea
+                  id="dt-pruebas"
+                  rows={3}
+                  value={datosTecnicos.pruebas}
+                  disabled={guardandoDatosTecnicos}
+                  onChange={(e) => cambiarTextoTecnico("pruebas", e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="dt-diagnostico">Diagnóstico</label>
+                <textarea
+                  id="dt-diagnostico"
+                  rows={3}
+                  value={datosTecnicos.diagnostico}
+                  disabled={guardandoDatosTecnicos}
+                  onChange={(e) => cambiarTextoTecnico("diagnostico", e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="dt-mediciones">Mediciones</label>
+                <textarea
+                  id="dt-mediciones"
+                  rows={3}
+                  value={datosTecnicos.mediciones}
+                  disabled={guardandoDatosTecnicos}
+                  onChange={(e) => cambiarTextoTecnico("mediciones", e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="dt-componente">Componentes afectados</label>
+                {datosTecnicos.componentesAfectados.length > 0 && (
+                  <div className="chips" role="list" aria-label="Componentes afectados">
+                    {datosTecnicos.componentesAfectados.map((componente) => (
+                      <span key={componente} className="chip" role="listitem">
+                        <span>
+                          {componente}{" "}
+                          <button
+                            type="button"
+                            className="btn btn-quiet btn-small"
+                            aria-label={`Quitar ${componente}`}
+                            disabled={guardandoDatosTecnicos}
+                            onClick={() => quitarComponente(componente)}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="form-actions">
+                  <input
+                    id="dt-componente"
+                    value={nuevoComponente}
+                    disabled={guardandoDatosTecnicos}
+                    placeholder="Ej.: conector de carga"
+                    onChange={(e) => setNuevoComponente(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        agregarComponente();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-quiet btn-small"
+                    disabled={!nuevoComponente.trim() || guardandoDatosTecnicos}
+                    onClick={agregarComponente}
+                  >
+                    Agregar
+                  </button>
+                </div>
+              </div>
+              <div className="field">
+                <label htmlFor="dt-notas">Notas internas</label>
+                <p className="client-meta">Privadas: no las ve el cliente.</p>
+                <textarea
+                  id="dt-notas"
+                  rows={3}
+                  value={datosTecnicos.notasInternas}
+                  disabled={guardandoDatosTecnicos}
+                  onChange={(e) => cambiarTextoTecnico("notasInternas", e.target.value)}
+                />
+              </div>
+              <div className="form-actions">
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={guardandoDatosTecnicos}
+                  onClick={() => void guardarDatosTecnicos()}
+                >
+                  {guardandoDatosTecnicos ? "Guardando…" : "Guardar datos técnicos"}
+                </button>
+              </div>
+              {errorDatosTecnicos && (
+                <p className="form-error" role="alert">
+                  {errorDatosTecnicos}
+                </p>
+              )}
+            </section>
+          )}
 
           <section aria-label="Fotos del equipo" className="history">
             <h2 className="client-form-title">Fotos</h2>

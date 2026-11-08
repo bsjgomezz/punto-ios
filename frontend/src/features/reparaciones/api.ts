@@ -1,4 +1,4 @@
-import { apiGet, apiGetBlob, apiPost, apiPostForm } from "@/lib/api/client";
+import { apiGet, apiGetBlob, apiPost, apiPostForm, apiPut } from "@/lib/api/client";
 import type { Pagina } from "@/features/clientes/api";
 import type { Dispositivo } from "@/features/dispositivos/api";
 
@@ -70,6 +70,21 @@ export type Orden = {
   noEnciende: boolean;
   /** Códigos de estado a los que se puede pasar desde el actual (vacío si es un estado final). */
   estadosDisponibles: string[];
+  pruebas: string | null;
+  diagnostico: string | null;
+  mediciones: string | null;
+  componentesAfectados: string[];
+  /** Privadas del taller: no las ve el cliente. */
+  notasInternas: string | null;
+};
+
+/** Datos técnicos que carga el técnico. El backend los reemplaza todos juntos: un campo en `null` se borra. */
+export type DatosTecnicos = {
+  pruebas: string | null;
+  diagnostico: string | null;
+  mediciones: string | null;
+  componentesAfectados: string[];
+  notasInternas: string | null;
 };
 
 export type OrdenResumen = {
@@ -126,6 +141,11 @@ export function recibirEquipo(token: string, datos: NuevaOrden): Promise<Orden> 
 /** Pasa la orden a otro estado; el backend valida que la transición esté permitida y la deja en el historial. */
 export function cambiarEstadoDeOrden(token: string, ordenId: string, nuevoEstado: string): Promise<Orden> {
   return apiPost<Orden>(`/api/v1/reparaciones/${encodeURIComponent(ordenId)}/estado`, token, { nuevoEstado });
+}
+
+/** Reemplaza los datos técnicos de la orden: hay que mandar siempre los cinco campos (lo que no se manda se borra). */
+export function actualizarDatosTecnicos(token: string, ordenId: string, datos: DatosTecnicos): Promise<Orden> {
+  return apiPut<Orden>(`/api/v1/reparaciones/${encodeURIComponent(ordenId)}/datos-tecnicos`, token, datos);
 }
 
 export function listarTecnicos(token: string, signal?: AbortSignal): Promise<Persona[]> {

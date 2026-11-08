@@ -1,3 +1,5 @@
+using PuntoIOS.Domain.Auditoria;
+
 namespace PuntoIOS.Domain.Reparaciones;
 
 /// <summary>
@@ -8,6 +10,9 @@ public sealed class OrdenReparacion
 {
     public const int LargoMaximoProblema = 2000;
     public const int LargoMaximoOtroTipo = 200;
+    public const int LargoMaximoTextoTecnico = 2000;
+    public const int LargoMaximoComponenteAfectado = 60;
+    public const int MaximoComponentesAfectados = 20;
 
     private OrdenReparacion()
     {
@@ -56,6 +61,27 @@ public sealed class OrdenReparacion
     public int? SaludBateria { get; private set; }
 
     public string? NotasChecklist { get; private set; }
+
+    /// <summary>Pruebas que se le hicieron al equipo. Lo completa quien trabaja en la reparación.</summary>
+    public string? Pruebas { get; private set; }
+
+    /// <summary>Lo que se determinó al revisar el equipo.</summary>
+    public string? Diagnostico { get; private set; }
+
+    /// <summary>Mediciones tomadas (voltajes, consumos, etc.).</summary>
+    public string? Mediciones { get; private set; }
+
+    /// <summary>
+    /// Etiquetas libres de los componentes afectados ("Pantalla", "Conector de carga", "IC de carga").
+    /// No es un catálogo fijo: las escribe quien repara. Sin repetidos y en el orden en que se cargaron.
+    /// </summary>
+    public List<string> ComponentesAfectados { get; private set; } = [];
+
+    /// <summary>
+    /// Notas privadas del taller. NUNCA se expone en el portal público de seguimiento del cliente (S18) ni en
+    /// ningún otro DTO de cara al cliente — si en el futuro agregás un DTO público para una orden, no incluyas este campo.
+    /// </summary>
+    public string? NotasInternas { get; private set; }
 
     public bool TieneDesbloqueo => DesbloqueoCifrado is not null;
 
@@ -168,10 +194,98 @@ public sealed class OrdenReparacion
         }
     }
 
+    /// <summary>
+    /// Reemplaza los datos técnicos y devuelve únicamente los campos que realmente cambiaron.
+    /// Los textos vacíos quedan en null; los componentes se recortan, se descartan los vacíos y se quitan los
+    /// repetidos (queda la primera aparición). Valida todo antes de tocar nada: si algo no es válido no cambia ningún campo.
+    /// En el historial, una lista de componentes vacía se registra como null (vacío).
+    /// </summary>
+    public IReadOnlyList<CambioDeCampo> ActualizarDatosTecnicos(
+        string? pruebas,
+        string? diagnostico,
+        string? mediciones,
+        List<string>? componentesAfectados,
+        string? notasInternas)
+    {
+        var pruebasNuevas = TextoTecnico(pruebas, "Las pruebas admiten", nameof(pruebas));
+        var diagnosticoNuevo = TextoTecnico(diagnostico, "El diagnóstico admite", nameof(diagnostico));
+        var medicionesNuevas = TextoTecnico(mediciones, "Las mediciones admiten", nameof(mediciones));
+        var notasInternasNuevas = TextoTecnico(notasInternas, "Las notas internas admiten", nameof(notasInternas));
+
+        var componentesNuevos = (componentesAfectados ?? [])
+            .Select(VacioANulo)
+            .OfType<string>()
+            .Distinct()
+            .ToList();
+        if (componentesNuevos.Any(c => c.Length > LargoMaximoComponenteAfectado))
+        {
+            throw new ArgumentException(
+                $"Cada componente afectado admite hasta {LargoMaximoComponenteAfectado} caracteres.", nameof(componentesAfectados));
+        }
+
+        if (componentesNuevos.Count > MaximoComponentesAfectados)
+        {
+            throw new ArgumentException(
+                $"Se pueden cargar hasta {MaximoComponentesAfectados} componentes afectados.", nameof(componentesAfectados));
+        }
+
+        var cambios = new List<CambioDeCampo>();
+
+        if (pruebasNuevas != Pruebas)
+        {
+            cambios.Add(new CambioDeCampo("pruebas", Pruebas, pruebasNuevas));
+            Pruebas = pruebasNuevas;
+        }
+
+        if (diagnosticoNuevo != Diagnostico)
+        {
+            cambios.Add(new CambioDeCampo("diagnostico", Diagnostico, diagnosticoNuevo));
+            Diagnostico = diagnosticoNuevo;
+        }
+
+        if (medicionesNuevas != Mediciones)
+        {
+            cambios.Add(new CambioDeCampo("mediciones", Mediciones, medicionesNuevas));
+            Mediciones = medicionesNuevas;
+        }
+
+        if (!componentesNuevos.SequenceEqual(ComponentesAfectados))
+        {
+            cambios.Add(new CambioDeCampo(
+                "componentes_afectados", UnirComponentes(ComponentesAfectados), UnirComponentes(componentesNuevos)));
+            ComponentesAfectados = componentesNuevos;
+        }
+
+        if (notasInternasNuevas != NotasInternas)
+        {
+            cambios.Add(new CambioDeCampo("notas_internas", NotasInternas, notasInternasNuevas));
+            NotasInternas = notasInternasNuevas;
+        }
+
+        return cambios;
+    }
+
     /// <summary>Borra el código de desbloqueo. Se llama al entregar el equipo.</summary>
     public void BorrarDesbloqueo()
     {
         DesbloqueoTipo = null;
         DesbloqueoCifrado = null;
     }
+
+    private static string? TextoTecnico(string? valor, string inicioDelMensaje, string parametro)
+    {
+        var texto = VacioANulo(valor);
+        if (texto?.Length > LargoMaximoTextoTecnico)
+        {
+            throw new ArgumentException($"{inicioDelMensaje} hasta {LargoMaximoTextoTecnico} caracteres.", parametro);
+        }
+
+        return texto;
+    }
+
+    /// <summary>Texto para el historial: "Pantalla, Conector de carga", o null si no hay ninguno.</summary>
+    private static string? UnirComponentes(List<string> componentes) =>
+        componentes.Count == 0 ? null : string.Join(", ", componentes);
+
+    private static string? VacioANulo(string? valor) => string.IsNullOrWhiteSpace(valor) ? null : valor.Trim();
 }

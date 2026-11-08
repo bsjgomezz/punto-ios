@@ -217,6 +217,137 @@ describe("OrdenDetalle", () => {
     });
   });
 
+  describe("datos técnicos", () => {
+    const PERMISOS_TECNICO = ["reparaciones.ver", "reparaciones.reparar"];
+    const ordenConDatos = {
+      ...orden,
+      estadosDisponibles: [],
+      pruebas: "Probé el cargador original",
+      diagnostico: "Conector sulfatado",
+      mediciones: null,
+      componentesAfectados: ["Conector de carga"],
+      notasInternas: "Cliente apurado",
+    };
+
+    /** Orden con datos técnicos; el PUT responde `respuestaPut`. */
+    function stubDatosTecnicos(respuestaPut: () => Response, permisos: string[] = PERMISOS_TECNICO, ordenInicial: unknown = ordenConDatos) {
+      const fetchMock = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>((url, init) => {
+        if (url.includes("/api/v1/me")) return Promise.resolve(json(me(permisos)));
+        if (init?.method === "PUT" && url.endsWith("/datos-tecnicos")) return Promise.resolve(respuestaPut());
+        if (url.includes("/historial")) return Promise.resolve(json({ items: [] }));
+        if (url.endsWith("/fotos")) return Promise.resolve(json([]));
+        return Promise.resolve(json(ordenInicial));
+      });
+      vi.stubGlobal("fetch", fetchMock);
+      return fetchMock;
+    }
+
+    it("con el permiso muestra la sección con los valores actuales", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      stubDatosTecnicos(() => json({}));
+
+      render(<OrdenDetalle id="o1" />);
+
+      const seccion = within(await screen.findByRole("region", { name: "Datos técnicos" }));
+      expect(seccion.getByLabelText("Pruebas realizadas")).toHaveValue("Probé el cargador original");
+      expect(seccion.getByLabelText("Diagnóstico")).toHaveValue("Conector sulfatado");
+      expect(seccion.getByLabelText("Mediciones")).toHaveValue("");
+      expect(seccion.getByLabelText("Notas internas")).toHaveValue("Cliente apurado");
+      expect(seccion.getByText("Privadas: no las ve el cliente.")).toBeInTheDocument();
+      const lista = within(seccion.getByRole("list", { name: "Componentes afectados" }));
+      expect(lista.getAllByRole("listitem").map((li) => li.textContent?.replace("×", "").trim())).toEqual(["Conector de carga"]);
+    });
+
+    it("sin el permiso no muestra la sección", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      stubDatosTecnicos(() => json({}), ["reparaciones.ver", "reparaciones.cambiar_estado"]);
+
+      render(<OrdenDetalle id="o1" />);
+
+      await screen.findByRole("heading", { name: "Orden 25" });
+      expect(screen.queryByRole("region", { name: "Datos técnicos" })).not.toBeInTheDocument();
+      expect(screen.queryByText("Conector sulfatado")).not.toBeInTheDocument();
+    });
+
+    it("agrega y quita componentes afectados", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      stubDatosTecnicos(() => json({}));
+
+      render(<OrdenDetalle id="o1" />);
+
+      const input = await screen.findByRole("textbox", { name: "Componentes afectados" });
+      fireEvent.change(input, { target: { value: "Batería" } });
+      fireEvent.click(screen.getByRole("button", { name: "Agregar" }));
+      fireEvent.change(input, { target: { value: "Flex de botones" } });
+      fireEvent.keyDown(input, { key: "Enter" });
+
+      const nombres = () =>
+        within(screen.getByRole("list", { name: "Componentes afectados" }))
+          .getAllByRole("listitem")
+          .map((li) => li.textContent?.replace("×", "").trim());
+      expect(nombres()).toEqual(["Conector de carga", "Batería", "Flex de botones"]);
+      expect(input).toHaveValue("");
+
+      fireEvent.click(screen.getByRole("button", { name: "Quitar Batería" }));
+      expect(nombres()).toEqual(["Conector de carga", "Flex de botones"]);
+    });
+
+    it("guarda con PUT los cinco campos y muestra lo que devuelve el backend", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      const actualizada = {
+        ...ordenConDatos,
+        diagnostico: "Conector roto, hay que cambiarlo",
+        componentesAfectados: ["Conector de carga", "Batería"],
+      };
+      const fetchMock = stubDatosTecnicos(() => json(actualizada));
+
+      render(<OrdenDetalle id="o1" />);
+
+      fireEvent.change(await screen.findByLabelText("Diagnóstico"), { target: { value: "Conector roto" } });
+      fireEvent.change(screen.getByRole("textbox", { name: "Componentes afectados" }), { target: { value: "Batería" } });
+      fireEvent.click(screen.getByRole("button", { name: "Agregar" }));
+      fireEvent.click(screen.getByRole("button", { name: "Guardar datos técnicos" }));
+
+      expect(await screen.findByDisplayValue("Conector roto, hay que cambiarlo")).toBeInTheDocument();
+      const put = fetchMock.mock.calls.find(([url, init]) => init?.method === "PUT" && url.endsWith("/reparaciones/o1/datos-tecnicos"));
+      expect(put).toBeDefined();
+      expect(JSON.parse(String(put![1]!.body))).toEqual({
+        pruebas: "Probé el cargador original",
+        diagnostico: "Conector roto",
+        mediciones: null,
+        componentesAfectados: ["Conector de carga", "Batería"],
+        notasInternas: "Cliente apurado",
+      });
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+
+    it("muestra el error si el rol no tiene permiso, sin romper la pantalla", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      stubDatosTecnicos(() => json({ title: "Forbidden", status: 403 }, 403));
+
+      render(<OrdenDetalle id="o1" />);
+
+      fireEvent.click(await screen.findByRole("button", { name: "Guardar datos técnicos" }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent("Tu rol no permite editar los datos técnicos de la orden.");
+      expect(screen.getByRole("heading", { name: "Orden 25" })).toBeInTheDocument();
+      expect(screen.getByLabelText("Diagnóstico")).toHaveValue("Conector sulfatado");
+    });
+
+    it("muestra el título del error de validación del backend", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      stubDatosTecnicos(() =>
+        json({ title: "No se pueden cargar más de 20 componentes.", codigo: "datos_tecnicos_invalidos", status: 400 }, 400),
+      );
+
+      render(<OrdenDetalle id="o1" />);
+
+      fireEvent.click(await screen.findByRole("button", { name: "Guardar datos técnicos" }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent("No se pueden cargar más de 20 componentes.");
+    });
+  });
+
   it("muestra en el historial los cambios de estado con el nombre de cada estado", async () => {
     mocks.getIdToken.mockResolvedValue("t");
     stubCambioDeEstado(() => json({}), { ...orden, estadosDisponibles: [] }, [

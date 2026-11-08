@@ -44,7 +44,7 @@ Backend ASP.NET Core con solución por capas, frontend Next.js (TS estricto), Po
 - S11 Listados y bandeja por rol (técnico ve asignadas). ✅ *(`GET /reparaciones` suma los filtros opcionales `tecnicoId` y `soloActivas` (excluye Entregado/Cancelado), sin cambiar el comportamiento por defecto — la ficha del cliente sigue viendo todo su historial. La bandeja general del frontend arranca con "Solo activas" marcado para todos, y "Solo mis reparaciones" marcado por defecto (desmarcable) cuando el rol es Técnico. Backend 240/240, frontend 95/95; lint y typecheck limpios; verificado por el usuario)*
 
 ### Fase 5 — Diagnóstico y presupuestos → Hito A parcial
-- S12 Pruebas, diagnóstico, mediciones, componentes afectados, notas técnicas internas.
+- S12 Pruebas, diagnóstico, mediciones, componentes afectados, notas técnicas internas. ✅ *(5 campos opcionales de la orden: 4 de texto libre y `componentesAfectados` como lista de etiquetas libres, sin catálogo fijo; solo edita quien tiene `reparaciones.reparar` (Técnico y Admin); reemplazo total al guardar (no parcial); cada cambio se audita campo por campo (acción `editado`, reusando el mecanismo de edición de cliente) y aparece en el historial; `notasInternas` quedan documentadas como privadas, no deben pasar a un futuro DTO público del portal (S18). Backend 266/266, frontend 101/101; lint y typecheck limpios; verificado por el usuario)*
 - S13 Presupuesto versionado.
 - S14 Aprobación/rechazo (primero interno; el portal en Fase 7) con timestamp de servidor.
 

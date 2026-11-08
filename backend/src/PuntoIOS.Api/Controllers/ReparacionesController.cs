@@ -5,6 +5,7 @@ using PuntoIOS.Application.Features.Auditoria;
 using PuntoIOS.Application.Features.Clientes.CrearCliente;
 using PuntoIOS.Application.Features.Identidad.Puertos;
 using PuntoIOS.Application.Features.Reparaciones;
+using PuntoIOS.Application.Features.Reparaciones.ActualizarDatosTecnicos;
 using PuntoIOS.Application.Features.Reparaciones.CambiarEstado;
 using PuntoIOS.Application.Features.Reparaciones.ConsultarOrdenes;
 using PuntoIOS.Application.Features.Reparaciones.Fotos;
@@ -37,6 +38,14 @@ public sealed record TipoReparacionDto(string Codigo, string Nombre);
 
 public sealed record CambiarEstadoRequest(string? NuevoEstado);
 
+/// <summary>Datos técnicos de la reparación. Reemplaza todos los campos: lo que se manda vacío o null queda vacío.</summary>
+public sealed record ActualizarDatosTecnicosRequest(
+    string? Pruebas,
+    string? Diagnostico,
+    string? Mediciones,
+    List<string>? ComponentesAfectados,
+    string? NotasInternas);
+
 [ApiController]
 [Route("api/v1/reparaciones")]
 public sealed class ReparacionesController(
@@ -49,7 +58,8 @@ public sealed class ReparacionesController(
     AgregarFotoHandler agregarFoto,
     ListarFotosHandler listarFotos,
     ObtenerFotoHandler obtenerFoto,
-    CambiarEstadoOrdenHandler cambiarEstado) : ControllerBase
+    CambiarEstadoOrdenHandler cambiarEstado,
+    ActualizarDatosTecnicosHandler actualizarDatosTecnicos) : ControllerBase
 {
     /// <summary>
     /// Órdenes de la más nueva a la más vieja. Con <c>clienteId</c>, solo las de ese cliente; con <c>tecnicoId</c>,
@@ -136,6 +146,22 @@ public sealed class ReparacionesController(
     public async Task<ActionResult<OrdenReparacionDto>> CambiarEstado(Guid id, CambiarEstadoRequest request, CancellationToken ct)
     {
         var resultado = await cambiarEstado.HandleAsync(new CambiarEstadoOrdenCommand(id, request.NuevoEstado), ct);
+        return resultado.EsExitoso ? Ok(resultado.Valor) : resultado.Error!.ToProblem();
+    }
+
+    /// <summary>
+    /// Reemplaza los datos técnicos (pruebas, diagnóstico, mediciones, componentes afectados y notas internas).
+    /// Solo quien trabaja en reparaciones. Los campos que cambiaron quedan en el historial.
+    /// </summary>
+    [HttpPut("{id:guid}/datos-tecnicos")]
+    [Authorize(Policy = Permisos.ReparacionesReparar)]
+    public async Task<ActionResult<OrdenReparacionDto>> ActualizarDatosTecnicos(
+        Guid id, ActualizarDatosTecnicosRequest request, CancellationToken ct)
+    {
+        var resultado = await actualizarDatosTecnicos.HandleAsync(
+            new ActualizarDatosTecnicosCommand(
+                id, request.Pruebas, request.Diagnostico, request.Mediciones, request.ComponentesAfectados, request.NotasInternas),
+            ct);
         return resultado.EsExitoso ? Ok(resultado.Valor) : resultado.Error!.ToProblem();
     }
 

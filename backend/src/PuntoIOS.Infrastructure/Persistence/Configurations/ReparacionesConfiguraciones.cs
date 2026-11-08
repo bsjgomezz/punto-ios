@@ -33,7 +33,11 @@ internal sealed class OrdenReparacionConfiguration : IEntityTypeConfiguration<Or
         builder.Property(o => o.DesbloqueoCifrado).HasColumnName("desbloqueo_cifrado").HasMaxLength(1000);
         builder.Property(o => o.CreadoPorUsuarioId).HasColumnName("creado_por_usuario_id");
         builder.Property(o => o.CreadoEn).HasColumnName("creado_en");
+        builder.Property(o => o.SaludBateria).HasColumnName("salud_bateria");
+        builder.Property(o => o.NotasChecklist).HasColumnName("notas_checklist").HasMaxLength(ItemsDeChecklist.LargoMaximoNotas);
+        builder.OwnsMany(o => o.ChecklistItems, items => items.ToJson("checklist_ingreso"));
         builder.Ignore(o => o.TieneDesbloqueo);
+        builder.Ignore(o => o.NoEnciende);
 
         builder.HasIndex(o => o.Numero).IsUnique();
         builder.HasIndex(o => new { o.LocalId, o.CreadoEn });
@@ -44,5 +48,26 @@ internal sealed class OrdenReparacionConfiguration : IEntityTypeConfiguration<Or
         builder.HasOne<Cliente>().WithMany().HasForeignKey(o => o.ClienteId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Dispositivo>().WithMany().HasForeignKey(o => o.DispositivoId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Usuario>().WithMany().HasForeignKey(o => o.TecnicoUsuarioId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class FotoOrdenConfiguration : IEntityTypeConfiguration<FotoOrden>
+{
+    public void Configure(EntityTypeBuilder<FotoOrden> builder)
+    {
+        builder.ToTable("fotos_orden");
+        builder.HasKey(f => f.Id);
+        builder.Property(f => f.Id).HasColumnName("id").ValueGeneratedNever();
+        builder.Property(f => f.LocalId).HasColumnName("local_id");
+        builder.Property(f => f.OrdenId).HasColumnName("orden_id");
+        builder.Property(f => f.Ruta).HasColumnName("ruta").HasMaxLength(300).IsRequired();
+        builder.Property(f => f.TipoContenido).HasColumnName("tipo_contenido").HasMaxLength(50).IsRequired();
+        builder.Property(f => f.Tamano).HasColumnName("tamano");
+        builder.Property(f => f.CreadoPorUsuarioId).HasColumnName("creado_por_usuario_id");
+        builder.Property(f => f.CreadoEn).HasColumnName("creado_en");
+
+        builder.HasIndex(f => new { f.LocalId, f.OrdenId, f.CreadoEn });
+        builder.HasOne<Local>().WithMany().HasForeignKey(f => f.LocalId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<OrdenReparacion>().WithMany().HasForeignKey(f => f.OrdenId).OnDelete(DeleteBehavior.Restrict);
     }
 }

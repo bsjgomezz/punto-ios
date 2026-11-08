@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using PuntoIOS.Application.Common.Archivos;
 using PuntoIOS.Application.Common.Multilocal;
+using PuntoIOS.Infrastructure.Archivos;
 using PuntoIOS.Application.Features.Auditoria.Puertos;
 using PuntoIOS.Application.Features.Clientes.Puertos;
 using PuntoIOS.Application.Features.Dispositivos.Puertos;
@@ -15,7 +17,8 @@ public static class DependencyInjection
     /// <summary>Registra la persistencia (EF Core + PostgreSQL) y los adaptadores de los puertos de Application.</summary>
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
-        Func<IServiceProvider, string?> connectionString)
+        Func<IServiceProvider, string?> connectionString,
+        Func<IServiceProvider, string?>? carpetaArchivos = null)
     {
         // La cadena se lee de forma diferida (al crear el contexto) para respetar la configuración final,
         // incluida la que agregan las pruebas de integración.
@@ -36,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<IDirectorioDeUsuarios, DirectorioDeUsuarios>();
         services.AddSingleton<ILocalActual, LocalUnico>();
         services.AddScoped<InicializadorBaseDeDatos>();
+        services.AddSingleton<IAlmacenDeArchivos>(sp => new AlmacenEnDisco(carpetaArchivos?.Invoke(sp)));
         return services;
     }
 }

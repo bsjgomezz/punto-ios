@@ -73,7 +73,9 @@ builder.Services
     });
 
 builder.Services.AddPoliticasDeAutorizacion();
-builder.Services.AddInfrastructure(sp => sp.GetRequiredService<IConfiguration>().GetConnectionString("Default"));
+builder.Services.AddInfrastructure(
+    sp => sp.GetRequiredService<IConfiguration>().GetConnectionString("Default"),
+    sp => sp.GetRequiredService<IConfiguration>()["Archivos:Carpeta"]);
 builder.Services.AddCasosDeUso();
 
 builder.Services.AddHealthChecks()

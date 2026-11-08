@@ -28,6 +28,8 @@ public static class AccionesAuditadas
 
     /// <summary>Alguien vio el código o patrón de desbloqueo de un equipo en reparación.</summary>
     public const string DesbloqueoConsultado = "desbloqueo_consultado";
+
+    public const string FotoAgregada = "foto_agregada";
 }
 
 /// <summary>

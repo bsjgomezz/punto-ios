@@ -48,12 +48,14 @@ const me = (permisos: string[]) => ({
 
 const json = (cuerpo: unknown, status = 200) => new Response(JSON.stringify(cuerpo), { status });
 
-function stubApi(permisos: string[]) {
+function stubApi(permisos: string[], ordenPersonalizada: unknown = orden, fotos: { id: string; creadoEn: string }[] = []) {
   const fetchMock = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>((url, init) => {
     if (url.includes("/api/v1/me")) return Promise.resolve(json(me(permisos)));
     if (init?.method === "POST") return Promise.resolve(json({ tipo: "patron", valor: "1-5-9" }));
     if (url.includes("/historial")) return Promise.resolve(json({ items: [] }));
-    return Promise.resolve(json(orden));
+    if (url.match(/\/fotos\/[^/]+$/)) return Promise.resolve(new Response(new Blob(["x"], { type: "image/jpeg" })));
+    if (url.endsWith("/fotos")) return Promise.resolve(json(fotos));
+    return Promise.resolve(json(ordenPersonalizada));
   });
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
@@ -89,5 +91,26 @@ describe("OrdenDetalle", () => {
 
     expect(await screen.findByRole("group", { name: "Patrón guardado" })).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([url, init]) => init?.method === "POST" && url.endsWith("/reparaciones/o1/desbloqueo"))).toBe(true);
+  });
+
+  it("si el equipo no enciende avisa, no estima fecha, y muestra el checklist y las fotos", async () => {
+    mocks.getIdToken.mockResolvedValue("t");
+    const ordenNoEnciende = {
+      ...orden,
+      fechaEstimadaEntrega: null,
+      noEnciende: true,
+      checklist: { items: { enciende: false }, saludBateria: 42, notas: "Vidrio roto" },
+    };
+    stubApi(["reparaciones.ver"], ordenNoEnciende, [{ id: "f1", creadoEn: "2026-11-07T12:00:00Z" }]);
+
+    render(<OrdenDetalle id="o1" />);
+
+    await screen.findByRole("heading", { name: "Orden 25" });
+    expect(screen.getByRole("alert")).toHaveTextContent("no enciende");
+    expect(screen.getByText("No se puede determinar")).toBeInTheDocument();
+    expect(screen.getByText((_, el) => el?.tagName === "LI" && el.textContent === "Enciende: no")).toBeInTheDocument();
+    expect(screen.getByText("Salud de batería: 42%")).toBeInTheDocument();
+    expect(screen.getByText("Notas: Vidrio roto")).toBeInTheDocument();
+    expect(await screen.findByRole("img", { name: "Foto del equipo" })).toBeInTheDocument();
   });
 });

@@ -49,7 +49,18 @@ public sealed class OrdenReparacion
 
     public DateTimeOffset CreadoEn { get; private set; }
 
+    /// <summary>Ítems revisados al recibir el equipo (los no revisados no figuran).</summary>
+    public List<ItemChecklist> ChecklistItems { get; private set; } = [];
+
+    /// <summary>Salud de la batería en % (0 a 100), si se pudo ver.</summary>
+    public int? SaludBateria { get; private set; }
+
+    public string? NotasChecklist { get; private set; }
+
     public bool TieneDesbloqueo => DesbloqueoCifrado is not null;
+
+    /// <summary>Llegó sin encender: no se puede determinar la falla completa ni una fecha estimada.</summary>
+    public bool NoEnciende => ChecklistItems.Any(i => i.Codigo == ItemsDeChecklist.Enciende && !i.Valor);
 
     public static OrdenReparacion Recibir(
         Guid localId,
@@ -63,7 +74,8 @@ public sealed class OrdenReparacion
         string? desbloqueoTipo,
         string? desbloqueoCifrado,
         Guid? creadoPorUsuarioId,
-        DateTimeOffset ahora)
+        DateTimeOffset ahora,
+        ChecklistIngreso? checklist = null)
     {
         if (string.IsNullOrWhiteSpace(problemaInformado))
         {
@@ -88,6 +100,29 @@ public sealed class OrdenReparacion
             throw new ArgumentException("El desbloqueo no es válido.", nameof(desbloqueoTipo));
         }
 
+        var items = checklist?.Items.ToList() ?? [];
+        if (items.Any(i => !ItemsDeChecklist.Existe(i.Codigo)) || items.Select(i => i.Codigo).Distinct().Count() != items.Count)
+        {
+            throw new ArgumentException("El checklist tiene ítems inválidos o repetidos.", nameof(checklist));
+        }
+
+        if (checklist?.SaludBateria is < 0 or > 100)
+        {
+            throw new ArgumentException("La salud de la batería va de 0 a 100.", nameof(checklist));
+        }
+
+        var notas = checklist?.Notas?.Trim() is { Length: > 0 } texto ? texto : null;
+        if (notas?.Length > ItemsDeChecklist.LargoMaximoNotas)
+        {
+            throw new ArgumentException("Las notas del checklist son demasiado largas.", nameof(checklist));
+        }
+
+        var noEnciende = items.Any(i => i.Codigo == ItemsDeChecklist.Enciende && !i.Valor);
+        if (noEnciende && fechaEstimadaEntrega is not null)
+        {
+            throw new ArgumentException(ItemsDeChecklist.RazonSinFecha, nameof(fechaEstimadaEntrega));
+        }
+
         return new OrdenReparacion
         {
             Id = Guid.CreateVersion7(),
@@ -104,6 +139,9 @@ public sealed class OrdenReparacion
             DesbloqueoCifrado = desbloqueoCifrado,
             CreadoPorUsuarioId = creadoPorUsuarioId,
             CreadoEn = ahora,
+            ChecklistItems = items,
+            SaludBateria = checklist?.SaludBateria,
+            NotasChecklist = notas,
         };
     }
 

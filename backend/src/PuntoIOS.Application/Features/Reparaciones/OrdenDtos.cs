@@ -21,7 +21,14 @@ public sealed record OrdenReparacionDto(
     DateOnly? FechaEstimadaEntrega,
     string? DesbloqueoTipo,
     string? CreadoPor,
-    DateTimeOffset CreadoEn);
+    DateTimeOffset CreadoEn,
+    ChecklistDto Checklist,
+    bool NoEnciende);
+
+/// <summary>Checklist de ingreso. <c>Items</c>: código → resultado (solo los revisados).</summary>
+public sealed record ChecklistDto(IReadOnlyDictionary<string, bool> Items, int? SaludBateria, string? Notas);
+
+public sealed record FotoDto(Guid Id, DateTimeOffset CreadoEn);
 
 /// <summary>Fila de los listados de órdenes.</summary>
 public sealed record OrdenResumenDto(
@@ -58,7 +65,9 @@ internal sealed class ArmadorDeOrdenes(
                 o.FechaEstimadaEntrega,
                 o.DesbloqueoTipo,
                 o.CreadoPorUsuarioId is { } c ? nombres.GetValueOrDefault(c) : null,
-                o.CreadoEn))
+                o.CreadoEn,
+                new ChecklistDto(o.ChecklistItems.ToDictionary(i => i.Codigo, i => i.Valor), o.SaludBateria, o.NotasChecklist),
+                o.NoEnciende))
             .ToList();
     }
 

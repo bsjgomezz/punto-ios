@@ -9,12 +9,18 @@ import { useMe } from "@/features/auth/use-me";
 import { ApiError, apiGet } from "@/lib/api/client";
 import {
   AVISO_FECHA_ESTIMADA,
+  CHECKLIST_CATALOGO,
   NOMBRES_DESBLOQUEO,
+  RAZON_SIN_FECHA,
   formatearFecha,
+  listarFotos,
   nombreDeEstado,
   nombreDeTipo,
+  obtenerFotoUrl,
   obtenerOrden,
+  subirFoto,
   verDesbloqueo,
+  type Foto,
   type Orden,
   type TipoDesbloqueo,
 } from "./api";
@@ -35,6 +41,33 @@ const ACCIONES: Record<string, string> = {
 
 const formatoFechaHora = new Intl.DateTimeFormat("es-AR", { dateStyle: "medium", timeStyle: "short" });
 
+function FotoMiniatura({ token, ordenId, foto }: { token: string; ordenId: string; foto: Foto }) {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    const controller = new AbortController();
+    obtenerFotoUrl(token, ordenId, foto.id, controller.signal)
+      .then((u) => {
+        objectUrl = u;
+        setUrl(u);
+      })
+      .catch(() => {});
+    return () => {
+      controller.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [token, ordenId, foto.id]);
+
+  if (!url) return <div className="foto-miniatura" aria-busy="true" />;
+  return (
+    <a href={url} target="_blank" rel="noreferrer">
+      {/* eslint-disable-next-line @next/next/no-img-element -- es una blob: URL autenticada, next/image no aplica */}
+      <img src={url} alt="Foto del equipo" className="foto-miniatura" />
+    </a>
+  );
+}
+
 export function OrdenDetalle({ id }: { id: string }) {
   const { user } = useAuth();
   const me = useMe();
@@ -44,19 +77,28 @@ export function OrdenDetalle({ id }: { id: string }) {
   const [recarga, setRecarga] = useState(0);
   const [desbloqueo, setDesbloqueo] = useState<{ tipo: TipoDesbloqueo; valor: string } | null>(null);
   const [errorDesbloqueo, setErrorDesbloqueo] = useState<string | null>(null);
+  const [fotos, setFotos] = useState<Foto[]>([]);
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
+  const [errorFoto, setErrorFoto] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
     const controller = new AbortController();
     user
       .getIdToken()
-      .then((token) =>
-        Promise.all([
-          obtenerOrden(token, id, controller.signal),
-          apiGet<{ items: Registro[] }>(`/api/v1/reparaciones/${encodeURIComponent(id)}/historial?pageSize=50`, token, controller.signal),
-        ]),
-      )
-      .then(([orden, historial]) => setEstado({ kind: "listo", orden, historial: historial.items }))
+      .then((t) => {
+        setToken(t);
+        return Promise.all([
+          obtenerOrden(t, id, controller.signal),
+          apiGet<{ items: Registro[] }>(`/api/v1/reparaciones/${encodeURIComponent(id)}/historial?pageSize=50`, t, controller.signal),
+          listarFotos(t, id, controller.signal).catch(() => [] as Foto[]),
+        ]);
+      })
+      .then(([orden, historial, listaFotos]) => {
+        setEstado({ kind: "listo", orden, historial: historial.items });
+        setFotos(listaFotos);
+      })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
         if (error instanceof ApiError && error.status === 404) setEstado({ kind: "noEncontrada" });
@@ -65,6 +107,23 @@ export function OrdenDetalle({ id }: { id: string }) {
       });
     return () => controller.abort();
   }, [user, id, recarga]);
+
+  async function subirFotos(archivos: FileList | null) {
+    if (!archivos || archivos.length === 0 || !user) return;
+    setErrorFoto(null);
+    setSubiendoFoto(true);
+    try {
+      const t = token ?? (await user.getIdToken());
+      for (const archivo of Array.from(archivos)) {
+        const foto = await subirFoto(t, id, archivo);
+        setFotos((actuales) => [...actuales, foto]);
+      }
+    } catch {
+      setErrorFoto("No se pudo subir alguna foto. Probá de nuevo.");
+    } finally {
+      setSubiendoFoto(false);
+    }
+  }
 
   async function mostrarDesbloqueo() {
     if (!user) return;
@@ -127,6 +186,12 @@ export function OrdenDetalle({ id }: { id: string }) {
             <span className="client-meta">{orden.cliente.telefono}</span>
           </p>
 
+          {orden.noEnciende && (
+            <p className="aviso-destacado" role="alert">
+              El equipo no enciende: no se pudo revisar el resto y no se pudo estimar una fecha de entrega.
+            </p>
+          )}
+
           <dl className="detail-list">
             <div>
               <dt>Equipo</dt>
@@ -154,10 +219,33 @@ export function OrdenDetalle({ id }: { id: string }) {
               <dt>Técnico</dt>
               <dd>{orden.tecnico?.nombre ?? "Sin asignar"}</dd>
             </div>
+            {orden.checklist && Object.keys(orden.checklist.items).length > 0 && (
+              <div>
+                <dt>Checklist de ingreso</dt>
+                <dd>
+                  <ul className="checklist-resultado">
+                    {CHECKLIST_CATALOGO.filter((item) => item.codigo in orden.checklist.items).map((item) => (
+                      <li key={item.codigo}>
+                        {item.nombre}: <strong>{orden.checklist.items[item.codigo] ? "sí" : "no"}</strong>
+                      </li>
+                    ))}
+                  </ul>
+                  {orden.checklist.saludBateria !== null && (
+                    <p className="client-meta">Salud de batería: {orden.checklist.saludBateria}%</p>
+                  )}
+                  {orden.checklist.notas && <p className="client-meta texto-largo">Notas: {orden.checklist.notas}</p>}
+                </dd>
+              </div>
+            )}
             <div>
               <dt>Entrega estimada</dt>
               <dd>
-                {orden.fechaEstimadaEntrega ? (
+                {orden.noEnciende ? (
+                  <div className="fecha-no-determinable">
+                    <p className="fecha-no-determinable-valor">No se puede determinar</p>
+                    <p className="client-meta">Razón: {RAZON_SIN_FECHA}</p>
+                  </div>
+                ) : orden.fechaEstimadaEntrega ? (
                   <>
                     {formatearFecha(orden.fechaEstimadaEntrega)}
                     <span className="client-meta aviso-fecha">{AVISO_FECHA_ESTIMADA}</span>
@@ -205,6 +293,34 @@ export function OrdenDetalle({ id }: { id: string }) {
               </dd>
             </div>
           </dl>
+
+          <section aria-label="Fotos del equipo" className="history">
+            <h2 className="client-form-title">Fotos</h2>
+            {fotos.length > 0 && token && (
+              <div className="fotos-galeria">
+                {fotos.map((foto) => <FotoMiniatura key={foto.id} token={token} ordenId={id} foto={foto} />)}
+              </div>
+            )}
+            <label className="btn btn-quiet btn-small fotos-boton">
+              {subiendoFoto ? "Subiendo…" : "Agregar fotos"}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                disabled={subiendoFoto}
+                onChange={(e) => {
+                  void subirFotos(e.target.files);
+                  e.target.value = "";
+                }}
+                style={{ display: "none" }}
+              />
+            </label>
+            {errorFoto && (
+              <p className="form-error" role="alert">
+                {errorFoto}
+              </p>
+            )}
+          </section>
 
           <section aria-label="Historial de la orden" className="history">
             <h2 className="client-form-title">Historial</h2>

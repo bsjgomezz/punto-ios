@@ -9,10 +9,14 @@ import { CamposEquipo } from "@/features/dispositivos/campos-equipo";
 import { ApiError } from "@/lib/api/client";
 import {
   AVISO_FECHA_ESTIMADA,
+  CHECKLIST_CATALOGO,
+  ITEM_ENCIENDE,
   NOMBRES_DESBLOQUEO,
+  RAZON_SIN_FECHA,
   TIPOS_DE_REPARACION,
   listarTecnicos,
   recibirEquipo,
+  subirFoto,
   type NuevaOrden,
   type Orden,
   type Persona,
@@ -29,6 +33,8 @@ type Props = {
 type Aviso = { kind: "error"; mensaje: string } | { kind: "imei"; duenio: Coincidencia | null };
 
 const OTRO_EQUIPO = "otro";
+const GRUPOS_CHECKLIST = ["Encendido", "Funciones", "Batería y cuenta"] as const;
+const FORMATOS_DE_FOTO_ADMITIDOS = "image/jpeg,image/png,image/webp";
 
 function hoy() {
   const ahora = new Date();
@@ -45,8 +51,30 @@ export function NuevaOrdenForm({ cliente, onCreada, onCancelar }: Props) {
   const [tipos, setTipos] = useState<string[]>([]);
   const [desbloqueo, setDesbloqueo] = useState<TipoDesbloqueo | "">("");
   const [patron, setPatron] = useState<number[]>([]);
+  const [checklist, setChecklist] = useState<Record<string, boolean>>({});
+  const [fotos, setFotos] = useState<File[]>([]);
   const [enviando, setEnviando] = useState(false);
   const [aviso, setAviso] = useState<Aviso | null>(null);
+
+  const noEnciende = checklist[ITEM_ENCIENDE] === false;
+
+  function alternarItemChecklist(codigo: string, valor: boolean) {
+    setChecklist((actual) => {
+      const copia = { ...actual };
+      if (copia[codigo] === valor) delete copia[codigo];
+      else copia[codigo] = valor;
+      return copia;
+    });
+  }
+
+  function agregarFotos(archivos: FileList | null) {
+    if (!archivos) return;
+    setFotos((actuales) => [...actuales, ...Array.from(archivos)]);
+  }
+
+  function quitarFoto(indice: number) {
+    setFotos((actuales) => actuales.filter((_, i) => i !== indice));
+  }
 
   useEffect(() => {
     if (!user) return;
@@ -89,13 +117,20 @@ export function NuevaOrdenForm({ cliente, onCreada, onCancelar }: Props) {
       return;
     }
 
+    const saludBateria = texto("saludBateria");
+    const notasChecklist = texto("notasChecklist");
+    const hayChecklist = Object.keys(checklist).length > 0 || saludBateria !== "" || notasChecklist !== "";
+
     const orden: NuevaOrden = {
       clienteId: cliente.id,
       problemaInformado: texto("problema"),
       tiposReparacion: tipos,
       otroTipoDescripcion: tipos.includes("otro") ? texto("otroTipo") || undefined : undefined,
       tecnicoId: texto("tecnico") || undefined,
-      fechaEstimadaEntrega: texto("fechaEstimada") || undefined,
+      fechaEstimadaEntrega: noEnciende ? undefined : texto("fechaEstimada") || undefined,
+      checklist: hayChecklist
+        ? { items: checklist, saludBateria: saludBateria ? Number(saludBateria) : undefined, notas: notasChecklist || undefined }
+        : undefined,
     };
     if (equipoElegido === OTRO_EQUIPO) {
       orden.equipoNuevo = {
@@ -116,7 +151,12 @@ export function NuevaOrdenForm({ cliente, onCreada, onCancelar }: Props) {
     setEnviando(true);
     setAviso(null);
     try {
-      onCreada(await recibirEquipo(await user.getIdToken(), orden));
+      const token = await user.getIdToken();
+      const creada = await recibirEquipo(token, orden);
+      if (fotos.length > 0) {
+        await Promise.allSettled(fotos.map((archivo) => subirFoto(token, creada.id, archivo)));
+      }
+      onCreada(creada);
     } catch (error) {
       if (error instanceof ApiError && error.problem?.codigo === "imei_duplicado") {
         setAviso({ kind: "imei", duenio: (error.problem.cliente as Coincidencia | null) ?? null });
@@ -202,6 +242,87 @@ export function NuevaOrdenForm({ cliente, onCreada, onCancelar }: Props) {
       </fieldset>
 
       <fieldset className="orden-bloque">
+        <legend>Checklist de ingreso (opcional)</legend>
+        <p className="fieldset-hint">Marcá lo que pudiste revisar al recibir el equipo. Lo que no se revisa no se guarda.</p>
+        {GRUPOS_CHECKLIST.map((grupo) => (
+          <div key={grupo} className="checklist-grupo">
+            <p className="chips-titulo">{grupo}</p>
+            <div className="checklist-items">
+              {CHECKLIST_CATALOGO.filter((item) => item.grupo === grupo).map((item) => (
+                <div key={item.codigo} className="checklist-item">
+                  <span>{item.nombre}</span>
+                  <div className="checklist-toggle" role="group" aria-label={item.nombre}>
+                    <button
+                      type="button"
+                      aria-pressed={checklist[item.codigo] === true}
+                      onClick={() => alternarItemChecklist(item.codigo, true)}
+                    >
+                      Sí
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={checklist[item.codigo] === false}
+                      onClick={() => alternarItemChecklist(item.codigo, false)}
+                    >
+                      No
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+        <div className="form-grid">
+          <div className="field">
+            <label htmlFor="orden-bateria">Salud de la batería % (opcional)</label>
+            <input id="orden-bateria" name="saludBateria" type="number" min={0} max={100} />
+          </div>
+        </div>
+        <div className="field field-wide">
+          <label htmlFor="orden-notas-checklist">Notas del checklist (opcional)</label>
+          <textarea id="orden-notas-checklist" name="notasChecklist" rows={2} maxLength={1000} />
+        </div>
+        {noEnciende && (
+          <p className="aviso-destacado" role="alert">
+            El equipo no enciende: no se pudo revisar el resto y no se puede estimar una fecha de entrega. Hay que avisarle esto al
+            cliente.
+          </p>
+        )}
+      </fieldset>
+
+      <fieldset className="orden-bloque">
+        <legend>Fotos del equipo (opcional)</legend>
+        <p className="fieldset-hint">JPG, PNG o WebP, hasta 10 MB cada una.</p>
+        <div className="fotos-selector">
+          <label className="btn btn-quiet btn-small fotos-boton">
+            Elegir fotos
+            <input
+              type="file"
+              accept={FORMATOS_DE_FOTO_ADMITIDOS}
+              multiple
+              onChange={(e) => {
+                agregarFotos(e.target.files);
+                e.target.value = "";
+              }}
+              style={{ display: "none" }}
+            />
+          </label>
+          {fotos.length > 0 && (
+            <ul className="fotos-previas">
+              {fotos.map((archivo, i) => (
+                <li key={`${archivo.name}-${i}`} className="foto-previa">
+                  <span className="client-meta">{archivo.name}</span>
+                  <button type="button" className="btn btn-quiet btn-small" onClick={() => quitarFoto(i)}>
+                    Quitar
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </fieldset>
+
+      <fieldset className="orden-bloque">
         <legend>Asignación y entrega</legend>
         <div className="form-grid">
           <div className="field">
@@ -217,7 +338,14 @@ export function NuevaOrdenForm({ cliente, onCreada, onCancelar }: Props) {
           </div>
           <div className="field">
             <label htmlFor="orden-fecha">Fecha estimada de entrega (opcional)</label>
-            <input id="orden-fecha" name="fechaEstimada" type="date" min={hoy()} aria-describedby="orden-fecha-aviso" />
+            {noEnciende ? (
+              <div className="fecha-no-determinable" aria-describedby="orden-fecha-aviso">
+                <p className="fecha-no-determinable-valor">No se puede determinar</p>
+                <p className="client-meta">Razón: {RAZON_SIN_FECHA}</p>
+              </div>
+            ) : (
+              <input id="orden-fecha" name="fechaEstimada" type="date" min={hoy()} aria-describedby="orden-fecha-aviso" />
+            )}
           </div>
         </div>
         <p className="fieldset-hint" id="orden-fecha-aviso">

@@ -28,5 +28,13 @@ internal sealed class OrdenReparacionRepositorio(PuntoIosDbContext db) : IOrdenR
 
     public void Agregar(OrdenReparacion orden) => db.OrdenesReparacion.Add(orden);
 
+    public void AgregarFoto(FotoOrden foto) => db.FotosOrden.Add(foto);
+
+    public async Task<IReadOnlyList<FotoOrden>> ListarFotosAsync(Guid ordenId, CancellationToken ct) =>
+        await db.FotosOrden.Where(f => f.OrdenId == ordenId).OrderBy(f => f.CreadoEn).ToListAsync(ct);
+
+    public Task<FotoOrden?> ObtenerFotoAsync(Guid ordenId, Guid fotoId, CancellationToken ct) =>
+        db.FotosOrden.FirstOrDefaultAsync(f => f.OrdenId == ordenId && f.Id == fotoId, ct);
+
     public Task GuardarCambiosAsync(CancellationToken ct) => db.SaveChangesAsync(ct);
 }

@@ -29,7 +29,8 @@ public sealed record RecibirEquipoCommand(
     Guid? TecnicoId,
     DateOnly? FechaEstimadaEntrega,
     string? DesbloqueoTipo,
-    string? DesbloqueoValor);
+    string? DesbloqueoValor,
+    ChecklistIngreso? Checklist = null);
 
 /// <summary>Recibe un equipo en el taller y crea la orden de reparación (y el equipo, si es nuevo) en una sola operación.</summary>
 public sealed class RecibirEquipoHandler(
@@ -113,7 +114,8 @@ public sealed class RecibirEquipoHandler(
             desbloqueo is null ? null : comando.DesbloqueoTipo,
             desbloqueo is null ? null : cifrado.Cifrar(desbloqueo),
             usuarioId,
-            ahora);
+            ahora,
+            comando.Checklist);
 
         ordenes.Agregar(orden);
         auditoria.Agregar(RegistroAuditoria.Registrar(
@@ -166,6 +168,31 @@ public sealed class RecibirEquipoHandler(
             if (c.OtroTipoDescripcion.Trim().Length > OrdenReparacion.LargoMaximoOtroTipo)
             {
                 return Invalido("texto_demasiado_largo", $"La descripción admite hasta {OrdenReparacion.LargoMaximoOtroTipo} caracteres.");
+            }
+        }
+
+        if (c.Checklist is { } checklist)
+        {
+            if (checklist.Items.Any(i => !ItemsDeChecklist.Existe(i.Codigo))
+                || checklist.Items.Select(i => i.Codigo).Distinct().Count() != checklist.Items.Count)
+            {
+                return Invalido("checklist_invalido", "El checklist tiene ítems que no existen o repetidos.");
+            }
+
+            if (checklist.SaludBateria is < 0 or > 100)
+            {
+                return Invalido("bateria_invalida", "La salud de la batería va de 0 a 100 %.");
+            }
+
+            if ((checklist.Notas?.Trim().Length ?? 0) > ItemsDeChecklist.LargoMaximoNotas)
+            {
+                return Invalido("texto_demasiado_largo", $"Las notas del checklist admiten hasta {ItemsDeChecklist.LargoMaximoNotas} caracteres.");
+            }
+
+            if (c.FechaEstimadaEntrega is not null
+                && checklist.Items.Any(i => i.Codigo == ItemsDeChecklist.Enciende && !i.Valor))
+            {
+                return Invalido("fecha_no_determinable", $"Si el equipo no enciende no se puede estimar la entrega. {ItemsDeChecklist.RazonSinFecha}");
             }
         }
 

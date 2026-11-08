@@ -616,6 +616,53 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("PuntoIOS.Domain.Reparaciones.FotoOrden", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<Guid?>("CreadoPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("creado_por_usuario_id");
+
+                    b.Property<Guid>("LocalId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("local_id");
+
+                    b.Property<Guid>("OrdenId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("orden_id");
+
+                    b.Property<string>("Ruta")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("ruta");
+
+                    b.Property<long>("Tamano")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tamano");
+
+                    b.Property<string>("TipoContenido")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("tipo_contenido");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrdenId");
+
+                    b.HasIndex("LocalId", "OrdenId", "CreadoEn");
+
+                    b.ToTable("fotos_orden", (string)null);
+                });
+
             modelBuilder.Entity("PuntoIOS.Domain.Reparaciones.OrdenReparacion", b =>
                 {
                     b.Property<Guid>("Id")
@@ -662,6 +709,11 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("local_id");
 
+                    b.Property<string>("NotasChecklist")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("notas_checklist");
+
                     b.Property<long>("Numero")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bigint")
@@ -678,6 +730,10 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("problema_informado");
+
+                    b.Property<int?>("SaludBateria")
+                        .HasColumnType("integer")
+                        .HasColumnName("salud_bateria");
 
                     b.Property<Guid?>("TecnicoUsuarioId")
                         .HasColumnType("uuid")
@@ -789,6 +845,21 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                     b.Navigation("Rol");
                 });
 
+            modelBuilder.Entity("PuntoIOS.Domain.Reparaciones.FotoOrden", b =>
+                {
+                    b.HasOne("PuntoIOS.Domain.Locales.Local", null)
+                        .WithMany()
+                        .HasForeignKey("LocalId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PuntoIOS.Domain.Reparaciones.OrdenReparacion", null)
+                        .WithMany()
+                        .HasForeignKey("OrdenId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("PuntoIOS.Domain.Reparaciones.OrdenReparacion", b =>
                 {
                     b.HasOne("PuntoIOS.Domain.Clientes.Cliente", null)
@@ -813,6 +884,32 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("TecnicoUsuarioId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.OwnsMany("PuntoIOS.Domain.Reparaciones.ItemChecklist", "ChecklistItems", b1 =>
+                        {
+                            b1.Property<Guid>("OrdenReparacionId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<string>("Codigo")
+                                .IsRequired();
+
+                            b1.Property<bool>("Valor");
+
+                            b1.HasKey("OrdenReparacionId", "__synthesizedOrdinal");
+
+                            b1.ToTable("ordenes_reparacion");
+
+                            b1
+                                .ToJson("checklist_ingreso")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("OrdenReparacionId");
+                        });
+
+                    b.Navigation("ChecklistItems");
                 });
 
             modelBuilder.Entity("PuntoIOS.Domain.Identidad.Rol", b =>

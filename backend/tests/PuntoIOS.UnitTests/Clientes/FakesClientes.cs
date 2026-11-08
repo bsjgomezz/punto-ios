@@ -119,9 +119,34 @@ internal sealed class OrdenRepoEnMemoria : PuntoIOS.Application.Features.Reparac
 
     public void Agregar(PuntoIOS.Domain.Reparaciones.OrdenReparacion orden) => Ordenes.Add(orden);
 
+    public List<PuntoIOS.Domain.Reparaciones.FotoOrden> Fotos { get; } = [];
+
+    public void AgregarFoto(PuntoIOS.Domain.Reparaciones.FotoOrden foto) => Fotos.Add(foto);
+
+    public Task<IReadOnlyList<PuntoIOS.Domain.Reparaciones.FotoOrden>> ListarFotosAsync(Guid ordenId, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<PuntoIOS.Domain.Reparaciones.FotoOrden>>(Fotos.Where(f => f.OrdenId == ordenId).ToList());
+
+    public Task<PuntoIOS.Domain.Reparaciones.FotoOrden?> ObtenerFotoAsync(Guid ordenId, Guid fotoId, CancellationToken ct) =>
+        Task.FromResult(Fotos.FirstOrDefault(f => f.OrdenId == ordenId && f.Id == fotoId));
+
     public Task GuardarCambiosAsync(CancellationToken ct)
     {
         Guardados++;
         return Task.CompletedTask;
     }
+}
+
+internal sealed class AlmacenEnMemoria : PuntoIOS.Application.Common.Archivos.IAlmacenDeArchivos
+{
+    public Dictionary<string, byte[]> Archivos { get; } = [];
+
+    public async Task GuardarAsync(string ruta, Stream contenido, CancellationToken ct)
+    {
+        using var copia = new MemoryStream();
+        await contenido.CopyToAsync(copia, ct);
+        Archivos[ruta] = copia.ToArray();
+    }
+
+    public Task<Stream?> AbrirAsync(string ruta, CancellationToken ct) =>
+        Task.FromResult<Stream?>(Archivos.TryGetValue(ruta, out var bytes) ? new MemoryStream(bytes) : null);
 }

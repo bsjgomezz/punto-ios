@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "@/lib/api/client";
+import { apiGet, apiGetBlob, apiPost, apiPostForm } from "@/lib/api/client";
 import type { Pagina } from "@/features/clientes/api";
 import type { Dispositivo } from "@/features/dispositivos/api";
 
@@ -49,6 +49,8 @@ export type Orden = {
   desbloqueoTipo: TipoDesbloqueo | null;
   creadoPor: string | null;
   creadoEn: string;
+  checklist: Checklist;
+  noEnciende: boolean;
 };
 
 export type OrdenResumen = {
@@ -74,6 +76,7 @@ export type NuevaOrden = {
   fechaEstimadaEntrega?: string;
   desbloqueoTipo?: TipoDesbloqueo;
   desbloqueoValor?: string;
+  checklist?: { items: Record<string, boolean>; saludBateria?: number; notas?: string };
 };
 
 export function listarOrdenes(
@@ -103,6 +106,23 @@ export function verDesbloqueo(token: string, id: string): Promise<{ tipo: TipoDe
   return apiPost<{ tipo: TipoDesbloqueo; valor: string }>(`/api/v1/reparaciones/${encodeURIComponent(id)}/desbloqueo`, token, {});
 }
 
+/** Sube una foto del equipo (JPG, PNG o WebP, hasta 10 MB; hasta 10 por orden). */
+export function subirFoto(token: string, ordenId: string, archivo: File): Promise<Foto> {
+  const datos = new FormData();
+  datos.append("foto", archivo);
+  return apiPostForm<Foto>(`/api/v1/reparaciones/${encodeURIComponent(ordenId)}/fotos`, token, datos);
+}
+
+export function listarFotos(token: string, ordenId: string, signal?: AbortSignal): Promise<Foto[]> {
+  return apiGet<Foto[]>(`/api/v1/reparaciones/${encodeURIComponent(ordenId)}/fotos`, token, signal);
+}
+
+/** Descarga la foto y devuelve una URL de objeto local para mostrarla (hay que revocarla al dejar de usarla). */
+export async function obtenerFotoUrl(token: string, ordenId: string, fotoId: string, signal?: AbortSignal): Promise<string> {
+  const blob = await apiGetBlob(`/api/v1/reparaciones/${encodeURIComponent(ordenId)}/fotos/${encodeURIComponent(fotoId)}`, token, signal);
+  return URL.createObjectURL(blob);
+}
+
 export function formatearFecha(fecha: string): string {
   const [anio, mes, dia] = fecha.split("-").map(Number);
   return new Intl.DateTimeFormat("es-AR", { dateStyle: "long" }).format(new Date(anio, mes - 1, dia));
@@ -110,3 +130,36 @@ export function formatearFecha(fecha: string): string {
 
 export const AVISO_FECHA_ESTIMADA =
   "Es orientativa: se calcula con lo que cuenta el cliente. Si al revisar el equipo aparecen otros problemas (por ejemplo, si llegó sin encender y no se pudo probar), la fecha puede cambiar y se le avisa.";
+
+/** Mismo catálogo que el backend (`ItemsDeChecklist.Catalogo`): código, grupo y texto para la pantalla. */
+export const CHECKLIST_CATALOGO: { codigo: string; grupo: string; nombre: string }[] = [
+  { codigo: "enciende", grupo: "Encendido", nombre: "Enciende" },
+  { codigo: "carga", grupo: "Encendido", nombre: "Carga" },
+  { codigo: "pantalla", grupo: "Encendido", nombre: "La pantalla da imagen" },
+  { codigo: "tactil", grupo: "Encendido", nombre: "El táctil responde" },
+  { codigo: "camara_trasera", grupo: "Funciones", nombre: "Cámara trasera" },
+  { codigo: "camara_frontal", grupo: "Funciones", nombre: "Cámara frontal" },
+  { codigo: "face_id", grupo: "Funciones", nombre: "Face ID / Touch ID" },
+  { codigo: "microfono", grupo: "Funciones", nombre: "Micrófono" },
+  { codigo: "parlante", grupo: "Funciones", nombre: "Parlante" },
+  { codigo: "auricular", grupo: "Funciones", nombre: "Auricular (llamadas)" },
+  { codigo: "senal", grupo: "Funciones", nombre: "Señal" },
+  { codigo: "wifi", grupo: "Funciones", nombre: "Wi-Fi" },
+  { codigo: "botones", grupo: "Funciones", nombre: "Botones" },
+  { codigo: "icloud", grupo: "Batería y cuenta", nombre: "iCloud / Buscar mi iPhone activo" },
+  { codigo: "sim", grupo: "Batería y cuenta", nombre: "Trae chip / SIM" },
+];
+
+/** Ítem del checklist que, si se marca que no funciona, impide estimar una fecha de entrega. */
+export const ITEM_ENCIENDE = "enciende";
+
+/** Mismo texto que el backend (`ItemsDeChecklist.RazonSinFecha`). */
+export const RAZON_SIN_FECHA = "No enciende y no se puede determinar la falla en su totalidad.";
+
+export type Checklist = {
+  items: Record<string, boolean>;
+  saludBateria: number | null;
+  notas: string | null;
+};
+
+export type Foto = { id: string; creadoEn: string };

@@ -127,4 +127,60 @@ describe("NuevaOrdenForm", () => {
 
     expect(await screen.findByRole("link", { name: "Gómez, Luis" })).toHaveAttribute("href", "/clientes/c9");
   });
+
+  it("si enciende se marca en No, oculta la fecha y avisa que no se puede determinar", async () => {
+    mocks.getIdToken.mockResolvedValue("t");
+    const fetchMock = stubApi([iphone]);
+    render(<NuevaOrdenForm cliente={ana} onCreada={vi.fn()} onCancelar={vi.fn()} />);
+    await screen.findByRole("radio", { name: /iPhone 13/ });
+
+    expect(screen.getByLabelText("Fecha estimada de entrega (opcional)")).toBeInTheDocument();
+
+    fireEvent.click(within(screen.getByRole("group", { name: "Enciende" })).getByRole("button", { name: "No" }));
+
+    expect(screen.queryByLabelText("Fecha estimada de entrega (opcional)")).not.toBeInTheDocument();
+    expect(screen.getByText("No se puede determinar")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("no enciende");
+
+    fireEvent.change(screen.getByLabelText("Problema que cuenta el cliente"), { target: { value: "No prende" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Diagnóstico" }));
+    fireEvent.click(screen.getByRole("button", { name: "Recibir equipo" }));
+
+    await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(true));
+    const cuerpo = cuerpoDelPost(fetchMock);
+    expect(cuerpo).not.toHaveProperty("fechaEstimadaEntrega");
+    expect(cuerpo.checklist).toEqual({ items: { enciende: false } });
+  });
+
+  it("vuelve a tocar el mismo botón del checklist para dejarlo sin revisar", async () => {
+    mocks.getIdToken.mockResolvedValue("t");
+    stubApi([iphone]);
+    render(<NuevaOrdenForm cliente={ana} onCreada={vi.fn()} onCancelar={vi.fn()} />);
+    await screen.findByRole("radio", { name: /iPhone 13/ });
+
+    const botonSi = within(screen.getByRole("group", { name: "Carga" })).getByRole("button", { name: "Sí" });
+    fireEvent.click(botonSi);
+    expect(botonSi).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(botonSi);
+    expect(botonSi).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("sube las fotos elegidas después de crear la orden", async () => {
+    mocks.getIdToken.mockResolvedValue("t");
+    const fetchMock = stubApi([iphone]);
+    render(<NuevaOrdenForm cliente={ana} onCreada={vi.fn()} onCancelar={vi.fn()} />);
+    await screen.findByRole("radio", { name: /iPhone 13/ });
+
+    const archivo = new File(["contenido"], "foto.jpg", { type: "image/jpeg" });
+    fireEvent.change(screen.getByLabelText("Elegir fotos"), { target: { files: [archivo] } });
+    expect(await screen.findByText("foto.jpg")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Problema que cuenta el cliente"), { target: { value: "No carga" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Conector de carga" }));
+    fireEvent.click(screen.getByRole("button", { name: "Recibir equipo" }));
+
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some(([url, init]) => init?.method === "POST" && url.toString().includes("/fotos"))).toBe(true),
+    );
+  });
 });

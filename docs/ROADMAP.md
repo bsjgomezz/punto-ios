@@ -38,8 +38,8 @@ Backend ASP.NET Core con solución por capas, frontend Next.js (TS estricto), Po
 **Aceptación:** gestionar clientes y dispositivos sin perder historial.
 
 ### Fase 4 — Recepción de reparaciones
-- S8 Crear orden (cliente, dispositivo, problema informado, técnico, tipo de reparación). *(en verificación: número correlativo desde 1 con secuencia de PostgreSQL; equipo existente o nuevo en la misma operación; tipos de reparación múltiples; técnico opcional entre quienes tienen `reparaciones.reparar`; fecha estimada con aviso de que es orientativa; desbloqueo PIN/contraseña/patrón cifrado, visible solo con `reparaciones.ver_desbloqueo` (Técnico y Admin) y auditado; se borra al entregar (S10))*
-- S9 Checklist de ingreso opcional y fotos (validación de archivos).
+- S8 Crear orden (cliente, dispositivo, problema informado, técnico, tipo de reparación). ✅ *(número correlativo desde 1 con secuencia de PostgreSQL; equipo existente o nuevo en la misma operación; tipos de reparación múltiples; técnico opcional entre quienes tienen `reparaciones.reparar`; fecha estimada con aviso de que es orientativa; desbloqueo PIN/contraseña/patrón cifrado, visible solo con `reparaciones.ver_desbloqueo` (Técnico y Admin) y auditado; se borra al entregar (S10))*
+- S9 Checklist de ingreso opcional y fotos (validación de archivos). ✅ *(catálogo fijo "Enciende/Carga/Pantalla/Táctil", "Funciones" y "Batería y cuenta" — ítems no revisados no se guardan; salud de batería 0-100% y notas; si "Enciende" se marca que no, no se permite fecha estimada (validado en dominio y en la aplicación) y la pantalla la reemplaza por "No se puede determinar" + motivo; fotos en disco local del servidor (no Firebase Storage, decisión que también aplica al futuro catálogo de celulares), formato detectado por contenido (no por nombre), hasta 10 MB y 10 fotos por orden, cada subida auditada. Backend 198/198, frontend 85/85; lint y typecheck limpios; verificado por el usuario)*
 - S10 Máquina de estados con transiciones controladas y auditoría.
 - S11 Listados y bandeja por rol (técnico ve asignadas).
 

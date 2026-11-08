@@ -13,6 +13,12 @@ public interface IOrdenReparacionRepositorio
 
     void Agregar(OrdenReparacion orden);
 
+    void AgregarFoto(FotoOrden foto);
+
+    Task<IReadOnlyList<FotoOrden>> ListarFotosAsync(Guid ordenId, CancellationToken ct);
+
+    Task<FotoOrden?> ObtenerFotoAsync(Guid ordenId, Guid fotoId, CancellationToken ct);
+
     /// <summary>Guarda los cambios. Al guardar una orden nueva, la base le asigna el número.</summary>
     Task GuardarCambiosAsync(CancellationToken ct);
 }

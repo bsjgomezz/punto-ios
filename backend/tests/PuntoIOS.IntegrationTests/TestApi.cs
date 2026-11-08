@@ -49,6 +49,7 @@ public sealed class TestApi : IDisposable
                     ["ConnectionStrings:Default"] = cadena,
                     ["Database:MigrateOnStartup"] = "true",
                     ["Seed:AdminEmail"] = EmailAdministrador,
+                    ["Archivos:Carpeta"] = Path.Combine(Path.GetTempPath(), "puntoios-tests", Guid.NewGuid().ToString("N")),
                 }));
             builder.ConfigureTestServices(services =>
                 services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>

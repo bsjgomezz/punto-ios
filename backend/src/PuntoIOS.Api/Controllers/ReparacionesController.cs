@@ -6,6 +6,7 @@ using PuntoIOS.Application.Features.Clientes.CrearCliente;
 using PuntoIOS.Application.Features.Identidad.Puertos;
 using PuntoIOS.Application.Features.Reparaciones;
 using PuntoIOS.Application.Features.Reparaciones.ConsultarOrdenes;
+using PuntoIOS.Application.Features.Reparaciones.Fotos;
 using PuntoIOS.Application.Features.Reparaciones.RecibirEquipo;
 using PuntoIOS.Application.Features.Reparaciones.VerDesbloqueo;
 using PuntoIOS.Domain.Identidad;
@@ -24,7 +25,11 @@ public sealed record RecibirEquipoRequest(
     Guid? TecnicoId = null,
     DateOnly? FechaEstimadaEntrega = null,
     string? DesbloqueoTipo = null,
-    string? DesbloqueoValor = null);
+    string? DesbloqueoValor = null,
+    ChecklistRequest? Checklist = null);
+
+/// <summary>Checklist de ingreso: <c>Items</c> es código → true/false (lo no revisado no se manda).</summary>
+public sealed record ChecklistRequest(Dictionary<string, bool>? Items, int? SaludBateria, string? Notas);
 
 public sealed record TipoReparacionDto(string Codigo, string Nombre);
 
@@ -36,7 +41,10 @@ public sealed class ReparacionesController(
     ListarOrdenesHandler listar,
     ListarTecnicosHandler tecnicos,
     VerDesbloqueoHandler verDesbloqueo,
-    HistorialOrdenHandler historial) : ControllerBase
+    HistorialOrdenHandler historial,
+    AgregarFotoHandler agregarFoto,
+    ListarFotosHandler listarFotos,
+    ObtenerFotoHandler obtenerFoto) : ControllerBase
 {
     /// <summary>Órdenes de la más nueva a la más vieja. Con <c>clienteId</c>, solo las de ese cliente.</summary>
     [HttpGet]
@@ -72,7 +80,11 @@ public sealed class ReparacionesController(
                 request.TecnicoId,
                 request.FechaEstimadaEntrega,
                 request.DesbloqueoTipo,
-                request.DesbloqueoValor),
+                request.DesbloqueoValor,
+                request.Checklist is { } c
+                    ? new ChecklistIngreso(
+                        (c.Items ?? []).Select(i => new ItemChecklist(i.Key, i.Value)).ToList(), c.SaludBateria, c.Notas)
+                    : null),
             ct);
 
         return resultado.EsExitoso
@@ -111,5 +123,46 @@ public sealed class ReparacionesController(
     {
         var resultado = await historial.HandleAsync(id, new PageRequest(page, pageSize), ct);
         return resultado.EsExitoso ? Ok(resultado.Valor) : resultado.Error!.ToProblem();
+    }
+
+    /// <summary>Sube una foto del equipo (JPG, PNG o WebP, hasta 10 MB; hasta 10 por orden).</summary>
+    [HttpPost("{id:guid}/fotos")]
+    [Authorize(Policy = Permisos.ReparacionesCrear)]
+    [RequestSizeLimit(FotoOrden.TamanoMaximoBytes + 1024 * 1024)]
+    [RequestFormLimits(MultipartBodyLengthLimit = FotoOrden.TamanoMaximoBytes + 1024 * 1024)]
+    public async Task<ActionResult<FotoDto>> AgregarFoto(Guid id, IFormFile? foto, CancellationToken ct)
+    {
+        if (foto is null)
+        {
+            return new Application.Common.Results.Error(
+                Application.Common.Results.TipoError.Validacion, "foto_obligatoria", "Elegí una foto.").ToProblem();
+        }
+
+        await using var contenido = foto.OpenReadStream();
+        var resultado = await agregarFoto.HandleAsync(id, contenido, foto.Length, ct);
+        return resultado.EsExitoso ? Ok(resultado.Valor) : resultado.Error!.ToProblem();
+    }
+
+    [HttpGet("{id:guid}/fotos")]
+    [Authorize(Policy = Permisos.ReparacionesVer)]
+    public async Task<ActionResult<IReadOnlyList<FotoDto>>> Fotos(Guid id, CancellationToken ct)
+    {
+        var resultado = await listarFotos.HandleAsync(id, ct);
+        return resultado.EsExitoso ? Ok(resultado.Valor) : resultado.Error!.ToProblem();
+    }
+
+    [HttpGet("{id:guid}/fotos/{fotoId:guid}")]
+    [Authorize(Policy = Permisos.ReparacionesVer)]
+    public async Task<IActionResult> Foto(Guid id, Guid fotoId, CancellationToken ct)
+    {
+        var resultado = await obtenerFoto.HandleAsync(id, fotoId, ct);
+        if (!resultado.EsExitoso)
+        {
+            return resultado.Error!.ToProblem();
+        }
+
+        Response.Headers.XContentTypeOptions = "nosniff";
+        Response.Headers.CacheControl = "private, max-age=3600";
+        return File(resultado.Valor!.Contenido, resultado.Valor.TipoContenido);
     }
 }

@@ -54,7 +54,7 @@ internal sealed class RolPermisoConfiguration : IEntityTypeConfiguration<RolPerm
         {
             Permisos.ClientesVer, Permisos.ClientesCrear, Permisos.ClientesEditar, Permisos.ClientesSeguimiento,
             Permisos.DispositivosVer, Permisos.DispositivosCrear, Permisos.DispositivosEditar, Permisos.DispositivosVerImei,
-            Permisos.ReparacionesVer, Permisos.ReparacionesCrear,
+            Permisos.ReparacionesVer, Permisos.ReparacionesCrear, Permisos.ReparacionesCambiarEstado,
         };
 
         // El técnico ve el IMEI completo para chequear bloqueos (iCloud, denuncias); cada consulta queda registrada.
@@ -63,6 +63,7 @@ internal sealed class RolPermisoConfiguration : IEntityTypeConfiguration<RolPerm
         {
             Permisos.ClientesVer, Permisos.DispositivosVer, Permisos.DispositivosVerImei,
             Permisos.ReparacionesVer, Permisos.ReparacionesReparar, Permisos.ReparacionesVerDesbloqueo,
+            Permisos.ReparacionesCambiarEstado,
         };
 
         builder.HasData(

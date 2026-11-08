@@ -5,6 +5,7 @@ using PuntoIOS.Application.Features.Auditoria;
 using PuntoIOS.Application.Features.Clientes.CrearCliente;
 using PuntoIOS.Application.Features.Identidad.Puertos;
 using PuntoIOS.Application.Features.Reparaciones;
+using PuntoIOS.Application.Features.Reparaciones.CambiarEstado;
 using PuntoIOS.Application.Features.Reparaciones.ConsultarOrdenes;
 using PuntoIOS.Application.Features.Reparaciones.Fotos;
 using PuntoIOS.Application.Features.Reparaciones.RecibirEquipo;
@@ -33,6 +34,8 @@ public sealed record ChecklistRequest(Dictionary<string, bool>? Items, int? Salu
 
 public sealed record TipoReparacionDto(string Codigo, string Nombre);
 
+public sealed record CambiarEstadoRequest(string? NuevoEstado);
+
 [ApiController]
 [Route("api/v1/reparaciones")]
 public sealed class ReparacionesController(
@@ -44,7 +47,8 @@ public sealed class ReparacionesController(
     HistorialOrdenHandler historial,
     AgregarFotoHandler agregarFoto,
     ListarFotosHandler listarFotos,
-    ObtenerFotoHandler obtenerFoto) : ControllerBase
+    ObtenerFotoHandler obtenerFoto,
+    CambiarEstadoOrdenHandler cambiarEstado) : ControllerBase
 {
     /// <summary>Órdenes de la más nueva a la más vieja. Con <c>clienteId</c>, solo las de ese cliente.</summary>
     [HttpGet]
@@ -98,6 +102,12 @@ public sealed class ReparacionesController(
     public ActionResult<IReadOnlyList<TipoReparacionDto>> Tipos() =>
         Ok(TiposDeReparacion.Catalogo.Select(t => new TipoReparacionDto(t.Key, t.Value)).ToList());
 
+    /// <summary>Todos los estados posibles de una orden, con su nombre para mostrar.</summary>
+    [HttpGet("estados")]
+    [Authorize(Policy = Permisos.ReparacionesVer)]
+    public ActionResult<IReadOnlyList<TipoReparacionDto>> Estados() =>
+        Ok(EstadosDeReparacion.Catalogo.Select(e => new TipoReparacionDto(e.Key, e.Value)).ToList());
+
     /// <summary>Personas a las que se les puede asignar una reparación.</summary>
     [HttpGet("tecnicos")]
     [Authorize(Policy = Permisos.ReparacionesCrear)]
@@ -110,6 +120,15 @@ public sealed class ReparacionesController(
     public async Task<ActionResult<DesbloqueoDto>> VerDesbloqueo(Guid id, CancellationToken ct)
     {
         var resultado = await verDesbloqueo.HandleAsync(id, ct);
+        return resultado.EsExitoso ? Ok(resultado.Valor) : resultado.Error!.ToProblem();
+    }
+
+    /// <summary>Pasa la orden a otro estado (solo transiciones permitidas). Queda registrado en el historial.</summary>
+    [HttpPost("{id:guid}/estado")]
+    [Authorize(Policy = Permisos.ReparacionesCambiarEstado)]
+    public async Task<ActionResult<OrdenReparacionDto>> CambiarEstado(Guid id, CambiarEstadoRequest request, CancellationToken ct)
+    {
+        var resultado = await cambiarEstado.HandleAsync(new CambiarEstadoOrdenCommand(id, request.NuevoEstado), ct);
         return resultado.EsExitoso ? Ok(resultado.Valor) : resultado.Error!.ToProblem();
     }
 

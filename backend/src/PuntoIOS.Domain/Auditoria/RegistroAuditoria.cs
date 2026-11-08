@@ -30,6 +30,9 @@ public static class AccionesAuditadas
     public const string DesbloqueoConsultado = "desbloqueo_consultado";
 
     public const string FotoAgregada = "foto_agregada";
+
+    /// <summary>La orden pasó de un estado a otro (el cambio guarda el anterior y el nuevo).</summary>
+    public const string EstadoCambiado = "estado_cambiado";
 }
 
 /// <summary>

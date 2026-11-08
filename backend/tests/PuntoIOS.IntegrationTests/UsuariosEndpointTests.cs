@@ -23,14 +23,15 @@ public class UsuariosEndpointTests(PostgresFixture postgres) : IClassFixture<Pos
         Assert.Equal(
             [
                 Permisos.ClientesVer, Permisos.DispositivosVer, Permisos.DispositivosVerImei,
-                Permisos.ReparacionesReparar, Permisos.ReparacionesVer, Permisos.ReparacionesVerDesbloqueo,
+                Permisos.ReparacionesCambiarEstado, Permisos.ReparacionesReparar, Permisos.ReparacionesVer,
+                Permisos.ReparacionesVerDesbloqueo,
             ],
             roles.Single(r => r.Id == RolesDeSistema.TecnicoId).Permisos);
         Assert.Equal(
             [
                 Permisos.ClientesCrear, Permisos.ClientesEditar, Permisos.ClientesSeguimiento, Permisos.ClientesVer,
                 Permisos.DispositivosCrear, Permisos.DispositivosEditar, Permisos.DispositivosVer, Permisos.DispositivosVerImei,
-                Permisos.ReparacionesCrear, Permisos.ReparacionesVer,
+                Permisos.ReparacionesCambiarEstado, Permisos.ReparacionesCrear, Permisos.ReparacionesVer,
             ],
             roles.Single(r => r.Id == RolesDeSistema.RecepcionVentasId).Permisos);
     }

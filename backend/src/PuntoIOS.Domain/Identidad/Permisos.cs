@@ -21,6 +21,7 @@ public static class Permisos
     public const string ReparacionesCrear = "reparaciones.crear";
     public const string ReparacionesReparar = "reparaciones.reparar";
     public const string ReparacionesVerDesbloqueo = "reparaciones.ver_desbloqueo";
+    public const string ReparacionesCambiarEstado = "reparaciones.cambiar_estado";
 
     /// <summary>Todos los permisos con su descripción (se siembran en la base de datos).</summary>
     public static readonly IReadOnlyDictionary<string, string> Catalogo = new Dictionary<string, string>
@@ -40,5 +41,6 @@ public static class Permisos
         [ReparacionesCrear] = "Recibir equipos y crear órdenes de reparación",
         [ReparacionesReparar] = "Trabajar en reparaciones (se le pueden asignar órdenes)",
         [ReparacionesVerDesbloqueo] = "Ver el código o patrón de desbloqueo del equipo (queda registrado)",
+        [ReparacionesCambiarEstado] = "Cambiar el estado de una orden de reparación (queda registrado)",
     };
 }

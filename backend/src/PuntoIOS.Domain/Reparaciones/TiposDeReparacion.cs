@@ -37,10 +37,48 @@ public static class TiposDeReparacion
     };
 }
 
-/// <summary>Estados de una orden. La máquina de estados completa llega en el S10; por ahora toda orden nace "recibido".</summary>
+/// <summary>Estados de una orden. Toda orden nace "recibido"; las transiciones permitidas están en <see cref="MaquinaDeEstados"/>.</summary>
 public static class EstadosDeReparacion
 {
     public const string Recibido = "recibido";
+    public const string EnPruebas = "en_pruebas";
+    public const string EnDiagnostico = "en_diagnostico";
+    public const string EsperandoPresupuesto = "esperando_presupuesto";
+    public const string PresupuestoEnviado = "presupuesto_enviado";
+    public const string EsperandoAprobacion = "esperando_aprobacion";
+    public const string PresupuestoRechazado = "presupuesto_rechazado";
+    public const string Aprobado = "aprobado";
+    public const string EnReparacion = "en_reparacion";
+    public const string EsperandoRepuesto = "esperando_repuesto";
+    public const string ReparacionCompletada = "reparacion_completada";
+    public const string ListoParaRetirar = "listo_para_retirar";
+
+    /// <summary>Terminal. Al entregar el equipo se borra el código de desbloqueo.</summary>
+    public const string Entregado = "entregado";
+
+    /// <summary>Terminal.</summary>
+    public const string Cancelado = "cancelado";
+
+    public const string Irreparable = "irreparable";
+
+    public static readonly IReadOnlyDictionary<string, string> Catalogo = new Dictionary<string, string>
+    {
+        [Recibido] = "Recibido",
+        [EnPruebas] = "En pruebas",
+        [EnDiagnostico] = "En diagnóstico",
+        [EsperandoPresupuesto] = "Esperando presupuesto",
+        [PresupuestoEnviado] = "Presupuesto enviado",
+        [EsperandoAprobacion] = "Esperando aprobación",
+        [PresupuestoRechazado] = "Presupuesto rechazado",
+        [Aprobado] = "Aprobado",
+        [EnReparacion] = "En reparación",
+        [EsperandoRepuesto] = "Esperando repuesto",
+        [ReparacionCompletada] = "Reparación completada",
+        [ListoParaRetirar] = "Listo para retirar",
+        [Entregado] = "Entregado",
+        [Cancelado] = "Cancelado",
+        [Irreparable] = "Irreparable",
+    };
 }
 
 /// <summary>Cómo se desbloquea el equipo.</summary>

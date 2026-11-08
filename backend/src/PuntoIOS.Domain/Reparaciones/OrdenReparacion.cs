@@ -145,7 +145,30 @@ public sealed class OrdenReparacion
         };
     }
 
-    /// <summary>Borra el código de desbloqueo. Se llama al entregar el equipo (S10).</summary>
+    /// <summary>
+    /// Pasa la orden a otro estado si la transición está permitida (<see cref="MaquinaDeEstados"/>).
+    /// Al entregar el equipo se borra el código de desbloqueo. Quién y cuándo lo registra la auditoría.
+    /// </summary>
+    public void CambiarEstado(string nuevoEstado)
+    {
+        if (nuevoEstado is null || !EstadosDeReparacion.Catalogo.ContainsKey(nuevoEstado))
+        {
+            throw new ArgumentException("El estado no existe.", nameof(nuevoEstado));
+        }
+
+        if (!MaquinaDeEstados.PuedeTransicionar(Estado, nuevoEstado))
+        {
+            throw new ArgumentException($"No se puede pasar de \"{Estado}\" a \"{nuevoEstado}\".", nameof(nuevoEstado));
+        }
+
+        Estado = nuevoEstado;
+        if (nuevoEstado == EstadosDeReparacion.Entregado)
+        {
+            BorrarDesbloqueo();
+        }
+    }
+
+    /// <summary>Borra el código de desbloqueo. Se llama al entregar el equipo.</summary>
     public void BorrarDesbloqueo()
     {
         DesbloqueoTipo = null;

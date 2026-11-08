@@ -309,6 +309,11 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         {
                             Codigo = "reparaciones.ver_desbloqueo",
                             Descripcion = "Ver el código o patrón de desbloqueo del equipo (queda registrado)"
+                        },
+                        new
+                        {
+                            Codigo = "reparaciones.cambiar_estado",
+                            Descripcion = "Cambiar el estado de una orden de reparación (queda registrado)"
                         });
                 });
 
@@ -460,6 +465,11 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         },
                         new
                         {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000001"),
+                            PermisoCodigo = "reparaciones.cambiar_estado"
+                        },
+                        new
+                        {
                             RolId = new Guid("0195a000-0000-7000-8000-000000000002"),
                             PermisoCodigo = "clientes.ver"
                         },
@@ -510,6 +520,11 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         },
                         new
                         {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000002"),
+                            PermisoCodigo = "reparaciones.cambiar_estado"
+                        },
+                        new
+                        {
                             RolId = new Guid("0195a000-0000-7000-8000-000000000003"),
                             PermisoCodigo = "clientes.ver"
                         },
@@ -537,6 +552,11 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         {
                             RolId = new Guid("0195a000-0000-7000-8000-000000000003"),
                             PermisoCodigo = "reparaciones.ver_desbloqueo"
+                        },
+                        new
+                        {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000003"),
+                            PermisoCodigo = "reparaciones.cambiar_estado"
                         });
                 });
 

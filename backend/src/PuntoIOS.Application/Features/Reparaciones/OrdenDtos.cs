@@ -7,7 +7,10 @@ using PuntoIOS.Domain.Reparaciones;
 
 namespace PuntoIOS.Application.Features.Reparaciones;
 
-/// <summary>Orden completa para el personal. El desbloqueo nunca viaja acá: solo si existe y de qué tipo es.</summary>
+/// <summary>
+/// Orden completa para el personal. El desbloqueo nunca viaja acá: solo si existe y de qué tipo es.
+/// <c>EstadosDisponibles</c>: estados a los que se puede pasar desde el actual.
+/// </summary>
 public sealed record OrdenReparacionDto(
     Guid Id,
     long Numero,
@@ -23,7 +26,8 @@ public sealed record OrdenReparacionDto(
     string? CreadoPor,
     DateTimeOffset CreadoEn,
     ChecklistDto Checklist,
-    bool NoEnciende);
+    bool NoEnciende,
+    IReadOnlyList<string> EstadosDisponibles);
 
 /// <summary>Checklist de ingreso. <c>Items</c>: código → resultado (solo los revisados).</summary>
 public sealed record ChecklistDto(IReadOnlyDictionary<string, bool> Items, int? SaludBateria, string? Notas);
@@ -67,7 +71,8 @@ internal sealed class ArmadorDeOrdenes(
                 o.CreadoPorUsuarioId is { } c ? nombres.GetValueOrDefault(c) : null,
                 o.CreadoEn,
                 new ChecklistDto(o.ChecklistItems.ToDictionary(i => i.Codigo, i => i.Valor), o.SaludBateria, o.NotasChecklist),
-                o.NoEnciende))
+                o.NoEnciende,
+                MaquinaDeEstados.SiguientesEstados(o.Estado)))
             .ToList();
     }
 

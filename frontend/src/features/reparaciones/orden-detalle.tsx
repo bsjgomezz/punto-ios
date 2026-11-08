@@ -6,12 +6,14 @@ import { BackLink } from "@/components/back-link";
 import { useAuth } from "@/features/auth/auth-provider";
 import { SessionBar } from "@/features/auth/session-bar";
 import { useMe } from "@/features/auth/use-me";
+import type { CambioDeCampo } from "@/features/clientes/api";
 import { ApiError, apiGet } from "@/lib/api/client";
 import {
   AVISO_FECHA_ESTIMADA,
   CHECKLIST_CATALOGO,
   NOMBRES_DESBLOQUEO,
   RAZON_SIN_FECHA,
+  cambiarEstadoDeOrden,
   formatearFecha,
   listarFotos,
   nombreDeEstado,
@@ -26,7 +28,7 @@ import {
 } from "./api";
 import { PatronDesbloqueo } from "./patron-desbloqueo";
 
-type Registro = { id: string; accion: string; usuario: string | null; fecha: string };
+type Registro = { id: string; accion: string; usuario: string | null; fecha: string; cambios?: CambioDeCampo[] };
 
 type Estado =
   | { kind: "listo"; orden: Orden; historial: Registro[] }
@@ -37,7 +39,18 @@ type Estado =
 const ACCIONES: Record<string, string> = {
   creado: "Equipo recibido",
   desbloqueo_consultado: "Se vio el código de desbloqueo",
+  estado_cambiado: "Cambió el estado",
 };
+
+function historialDeOrden(token: string, id: string, signal?: AbortSignal) {
+  return apiGet<{ items: Registro[] }>(`/api/v1/reparaciones/${encodeURIComponent(id)}/historial?pageSize=50`, token, signal);
+}
+
+function mensajeDeErrorDeEstado(error: unknown): string {
+  if (error instanceof ApiError && error.status === 403) return "Tu rol no permite cambiar el estado de la orden.";
+  if (error instanceof ApiError && error.problem?.title) return error.problem.title;
+  return "No se pudo cambiar el estado. Verificá la conexión e intentá de nuevo.";
+}
 
 const formatoFechaHora = new Intl.DateTimeFormat("es-AR", { dateStyle: "medium", timeStyle: "short" });
 
@@ -68,10 +81,24 @@ function FotoMiniatura({ token, ordenId, foto }: { token: string; ordenId: strin
   );
 }
 
+function TextoDeRegistro({ registro }: { registro: Registro }) {
+  const cambio = registro.cambios?.find((c) => c.campo === "estado");
+  if (registro.accion === "estado_cambiado" && cambio) {
+    return (
+      <span>
+        Cambió el estado de <strong>{cambio.anterior ? nombreDeEstado(cambio.anterior) : "sin estado"}</strong> a{" "}
+        <strong>{cambio.nuevo ? nombreDeEstado(cambio.nuevo) : "sin estado"}</strong>
+      </span>
+    );
+  }
+  return <strong>{ACCIONES[registro.accion] ?? registro.accion}</strong>;
+}
+
 export function OrdenDetalle({ id }: { id: string }) {
   const { user } = useAuth();
   const me = useMe();
   const puedeVerDesbloqueo = me.kind === "listo" && me.me.permisos.includes("reparaciones.ver_desbloqueo");
+  const puedeCambiarEstado = me.kind === "listo" && me.me.permisos.includes("reparaciones.cambiar_estado");
 
   const [estado, setEstado] = useState<Estado | null>(null);
   const [recarga, setRecarga] = useState(0);
@@ -81,6 +108,9 @@ export function OrdenDetalle({ id }: { id: string }) {
   const [subiendoFoto, setSubiendoFoto] = useState(false);
   const [errorFoto, setErrorFoto] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [estadoElegido, setEstadoElegido] = useState("");
+  const [cambiandoEstado, setCambiandoEstado] = useState(false);
+  const [errorEstado, setErrorEstado] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -91,7 +121,7 @@ export function OrdenDetalle({ id }: { id: string }) {
         setToken(t);
         return Promise.all([
           obtenerOrden(t, id, controller.signal),
-          apiGet<{ items: Registro[] }>(`/api/v1/reparaciones/${encodeURIComponent(id)}/historial?pageSize=50`, t, controller.signal),
+          historialDeOrden(t, id, controller.signal),
           listarFotos(t, id, controller.signal).catch(() => [] as Foto[]),
         ]);
       })
@@ -122,6 +152,25 @@ export function OrdenDetalle({ id }: { id: string }) {
       setErrorFoto("No se pudo subir alguna foto. Probá de nuevo.");
     } finally {
       setSubiendoFoto(false);
+    }
+  }
+
+  async function cambiarEstado() {
+    if (!estadoElegido || !user) return;
+    setErrorEstado(null);
+    setCambiandoEstado(true);
+    try {
+      const t = token ?? (await user.getIdToken());
+      const actualizada = await cambiarEstadoDeOrden(t, id, estadoElegido);
+      setEstado((actual) => (actual?.kind === "listo" ? { ...actual, orden: actualizada } : actual));
+      setEstadoElegido("");
+      // El cambio queda en el historial: se recarga solo eso, sin pisar la orden que devolvió el backend.
+      const historial = await historialDeOrden(t, id).catch(() => null);
+      if (historial) setEstado((actual) => (actual?.kind === "listo" ? { ...actual, historial: historial.items } : actual));
+    } catch (error) {
+      setErrorEstado(mensajeDeErrorDeEstado(error));
+    } finally {
+      setCambiandoEstado(false);
     }
   }
 
@@ -190,6 +239,49 @@ export function OrdenDetalle({ id }: { id: string }) {
             <p className="aviso-destacado" role="alert">
               El equipo no enciende: no se pudo revisar el resto y no se pudo estimar una fecha de entrega.
             </p>
+          )}
+
+          {puedeCambiarEstado && (
+            <section aria-label="Estado de la orden" className="history">
+              <h2 className="client-form-title">Estado</h2>
+              {orden.estadosDisponibles.length === 0 ? (
+                <p className="list-count">{nombreDeEstado(orden.estado)} es un estado final: la orden ya no cambia de estado.</p>
+              ) : (
+                <>
+                  <div className="field">
+                    <label htmlFor="nuevo-estado">Pasar a</label>
+                    <select
+                      id="nuevo-estado"
+                      value={estadoElegido}
+                      disabled={cambiandoEstado}
+                      onChange={(e) => setEstadoElegido(e.target.value)}
+                    >
+                      <option value="">Elegí un estado</option>
+                      {orden.estadosDisponibles.map((codigo) => (
+                        <option key={codigo} value={codigo}>
+                          {nombreDeEstado(codigo)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-actions">
+                    <button
+                      type="button"
+                      className="btn"
+                      disabled={!estadoElegido || cambiandoEstado}
+                      onClick={() => void cambiarEstado()}
+                    >
+                      {cambiandoEstado ? "Cambiando…" : "Cambiar estado"}
+                    </button>
+                  </div>
+                </>
+              )}
+              {errorEstado && (
+                <p className="form-error" role="alert">
+                  {errorEstado}
+                </p>
+              )}
+            </section>
           )}
 
           <dl className="detail-list">
@@ -328,7 +420,7 @@ export function OrdenDetalle({ id }: { id: string }) {
               {estado.historial.map((r) => (
                 <li key={r.id} className="history-item">
                   <p className="history-head">
-                    <strong>{ACCIONES[r.accion] ?? r.accion}</strong>
+                    <TextoDeRegistro registro={r} />
                     <span className="client-meta">
                       {r.usuario ? ` por ${r.usuario}` : ""} · {formatoFechaHora.format(new Date(r.fecha))}
                     </span>

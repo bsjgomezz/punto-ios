@@ -21,9 +21,26 @@ export const TIPOS_DE_REPARACION: { codigo: string; nombre: string }[] = [
 
 export const nombreDeTipo = (codigo: string) => TIPOS_DE_REPARACION.find((t) => t.codigo === codigo)?.nombre ?? codigo;
 
-export const ESTADOS: Record<string, string> = { recibido: "Recibido" };
+/** Mismo catálogo que el backend (`GET /reparaciones/estados`), en el orden del ciclo de la orden. */
+export const ESTADOS: { codigo: string; nombre: string }[] = [
+  { codigo: "recibido", nombre: "Recibido" },
+  { codigo: "en_pruebas", nombre: "En pruebas" },
+  { codigo: "en_diagnostico", nombre: "En diagnóstico" },
+  { codigo: "esperando_presupuesto", nombre: "Esperando presupuesto" },
+  { codigo: "presupuesto_enviado", nombre: "Presupuesto enviado" },
+  { codigo: "esperando_aprobacion", nombre: "Esperando aprobación" },
+  { codigo: "presupuesto_rechazado", nombre: "Presupuesto rechazado" },
+  { codigo: "aprobado", nombre: "Aprobado" },
+  { codigo: "en_reparacion", nombre: "En reparación" },
+  { codigo: "esperando_repuesto", nombre: "Esperando repuesto" },
+  { codigo: "reparacion_completada", nombre: "Reparación completada" },
+  { codigo: "listo_para_retirar", nombre: "Listo para retirar" },
+  { codigo: "entregado", nombre: "Entregado" },
+  { codigo: "cancelado", nombre: "Cancelado" },
+  { codigo: "irreparable", nombre: "Irreparable" },
+];
 
-export const nombreDeEstado = (estado: string) => ESTADOS[estado] ?? estado;
+export const nombreDeEstado = (codigo: string) => ESTADOS.find((e) => e.codigo === codigo)?.nombre ?? codigo;
 
 export type TipoDesbloqueo = "pin" | "contrasena" | "patron";
 
@@ -51,6 +68,8 @@ export type Orden = {
   creadoEn: string;
   checklist: Checklist;
   noEnciende: boolean;
+  /** Códigos de estado a los que se puede pasar desde el actual (vacío si es un estado final). */
+  estadosDisponibles: string[];
 };
 
 export type OrdenResumen = {
@@ -95,6 +114,11 @@ export function obtenerOrden(token: string, id: string, signal?: AbortSignal): P
 
 export function recibirEquipo(token: string, datos: NuevaOrden): Promise<Orden> {
   return apiPost<Orden>("/api/v1/reparaciones", token, datos);
+}
+
+/** Pasa la orden a otro estado; el backend valida que la transición esté permitida y la deja en el historial. */
+export function cambiarEstadoDeOrden(token: string, ordenId: string, nuevoEstado: string): Promise<Orden> {
+  return apiPost<Orden>(`/api/v1/reparaciones/${encodeURIComponent(ordenId)}/estado`, token, { nuevoEstado });
 }
 
 export function listarTecnicos(token: string, signal?: AbortSignal): Promise<Persona[]> {

@@ -8,8 +8,8 @@ public interface IOrdenReparacionRepositorio
 {
     Task<OrdenReparacion?> ObtenerPorIdAsync(Guid id, CancellationToken ct);
 
-    /// <summary>Órdenes de la más nueva a la más vieja; opcionalmente solo las de un cliente.</summary>
-    Task<PagedResult<OrdenReparacion>> ListarAsync(Guid? clienteId, PageRequest pagina, CancellationToken ct);
+    /// <summary>Órdenes de la más nueva a la más vieja, filtradas según <paramref name="filtro"/>.</summary>
+    Task<PagedResult<OrdenReparacion>> ListarAsync(FiltroDeOrdenes filtro, PageRequest pagina, CancellationToken ct);
 
     void Agregar(OrdenReparacion orden);
 

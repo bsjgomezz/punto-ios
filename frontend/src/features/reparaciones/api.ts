@@ -100,11 +100,18 @@ export type NuevaOrden = {
 
 export function listarOrdenes(
   token: string,
-  { clienteId, page = 1 }: { clienteId?: string; page?: number },
+  {
+    clienteId,
+    page = 1,
+    tecnicoId,
+    soloActivas,
+  }: { clienteId?: string; page?: number; tecnicoId?: string; soloActivas?: boolean },
   signal?: AbortSignal,
 ): Promise<Pagina<OrdenResumen>> {
   const params = new URLSearchParams({ page: String(page), pageSize: "20" });
   if (clienteId) params.set("clienteId", clienteId);
+  if (tecnicoId) params.set("tecnicoId", tecnicoId);
+  if (soloActivas !== undefined) params.set("soloActivas", String(soloActivas));
   return apiGet<Pagina<OrdenResumen>>(`/api/v1/reparaciones?${params}`, token, signal);
 }
 

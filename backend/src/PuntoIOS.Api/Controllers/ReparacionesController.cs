@@ -8,6 +8,7 @@ using PuntoIOS.Application.Features.Reparaciones;
 using PuntoIOS.Application.Features.Reparaciones.CambiarEstado;
 using PuntoIOS.Application.Features.Reparaciones.ConsultarOrdenes;
 using PuntoIOS.Application.Features.Reparaciones.Fotos;
+using PuntoIOS.Application.Features.Reparaciones.Puertos;
 using PuntoIOS.Application.Features.Reparaciones.RecibirEquipo;
 using PuntoIOS.Application.Features.Reparaciones.VerDesbloqueo;
 using PuntoIOS.Domain.Identidad;
@@ -50,15 +51,21 @@ public sealed class ReparacionesController(
     ObtenerFotoHandler obtenerFoto,
     CambiarEstadoOrdenHandler cambiarEstado) : ControllerBase
 {
-    /// <summary>Órdenes de la más nueva a la más vieja. Con <c>clienteId</c>, solo las de ese cliente.</summary>
+    /// <summary>
+    /// Órdenes de la más nueva a la más vieja. Con <c>clienteId</c>, solo las de ese cliente; con <c>tecnicoId</c>,
+    /// solo las asignadas a ese técnico; con <c>soloActivas=true</c>, sin las entregadas ni las canceladas.
+    /// Sin <c>soloActivas</c> (o en <c>false</c>) devuelve todas, incluidas las terminadas.
+    /// </summary>
     [HttpGet]
     [Authorize(Policy = Permisos.ReparacionesVer)]
     public async Task<ActionResult<PagedResult<OrdenResumenDto>>> Listar(
         [FromQuery] Guid? clienteId,
+        [FromQuery] Guid? tecnicoId,
+        [FromQuery] bool soloActivas = false,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = PageRequest.DefaultPageSize,
         CancellationToken ct = default) =>
-        Ok(await listar.HandleAsync(clienteId, new PageRequest(page, pageSize), ct));
+        Ok(await listar.HandleAsync(new FiltroDeOrdenes(clienteId, tecnicoId, soloActivas), new PageRequest(page, pageSize), ct));
 
     [HttpGet("{id:guid}")]
     [Authorize(Policy = Permisos.ReparacionesVer)]

@@ -111,9 +111,15 @@ internal sealed class OrdenRepoEnMemoria : PuntoIOS.Application.Features.Reparac
         Task.FromResult(Ordenes.FirstOrDefault(o => o.Id == id));
 
     public Task<PagedResult<PuntoIOS.Domain.Reparaciones.OrdenReparacion>> ListarAsync(
-        Guid? clienteId, PageRequest pagina, CancellationToken ct)
+        PuntoIOS.Application.Features.Reparaciones.Puertos.FiltroDeOrdenes filtro, PageRequest pagina, CancellationToken ct)
     {
-        var items = Ordenes.Where(o => clienteId is null || o.ClienteId == clienteId).ToList();
+        var items = Ordenes
+            .Where(o => filtro.ClienteId is null || o.ClienteId == filtro.ClienteId)
+            .Where(o => filtro.TecnicoId is null || o.TecnicoUsuarioId == filtro.TecnicoId)
+            .Where(o => !filtro.SoloActivas
+                || (o.Estado != PuntoIOS.Domain.Reparaciones.EstadosDeReparacion.Entregado
+                    && o.Estado != PuntoIOS.Domain.Reparaciones.EstadosDeReparacion.Cancelado))
+            .ToList();
         return Task.FromResult(new PagedResult<PuntoIOS.Domain.Reparaciones.OrdenReparacion>(items, pagina.Page, pagina.PageSize, items.Count));
     }
 

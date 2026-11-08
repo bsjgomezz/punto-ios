@@ -10,12 +10,22 @@ internal sealed class OrdenReparacionRepositorio(PuntoIosDbContext db) : IOrdenR
     public Task<OrdenReparacion?> ObtenerPorIdAsync(Guid id, CancellationToken ct) =>
         db.OrdenesReparacion.FirstOrDefaultAsync(o => o.Id == id, ct);
 
-    public async Task<PagedResult<OrdenReparacion>> ListarAsync(Guid? clienteId, PageRequest pagina, CancellationToken ct)
+    public async Task<PagedResult<OrdenReparacion>> ListarAsync(FiltroDeOrdenes filtro, PageRequest pagina, CancellationToken ct)
     {
         IQueryable<OrdenReparacion> consulta = db.OrdenesReparacion;
-        if (clienteId is { } id)
+        if (filtro.ClienteId is { } clienteId)
         {
-            consulta = consulta.Where(o => o.ClienteId == id);
+            consulta = consulta.Where(o => o.ClienteId == clienteId);
+        }
+
+        if (filtro.TecnicoId is { } tecnicoId)
+        {
+            consulta = consulta.Where(o => o.TecnicoUsuarioId == tecnicoId);
+        }
+
+        if (filtro.SoloActivas)
+        {
+            consulta = consulta.Where(o => o.Estado != EstadosDeReparacion.Entregado && o.Estado != EstadosDeReparacion.Cancelado);
         }
 
         var total = await consulta.CountAsync(ct);

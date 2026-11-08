@@ -132,6 +132,83 @@ public class ReparacionesEndpointTests(PostgresFixture postgres) : IClassFixture
         Assert.Empty((await admin.GetFromJsonAsync<PagedResult<OrdenResumenDto>>($"{Ruta}?clienteId={luis.Id}"))!.Items);
     }
 
+    /// <summary>
+    /// Arma cinco órdenes (números 1 a 5): 1 activa de T1, 2 entregada de T1, 3 cancelada de T1, 4 activa de T2 y 5 entregada de T2.
+    /// Los estados se cambian con el endpoint real, siguiendo transiciones válidas.
+    /// </summary>
+    private static async Task<(Guid Tecnico1, Guid Tecnico2)> OrdenesDeDosTecnicosAsync(TestApi api, HttpClient admin)
+    {
+        var (ana, iphone) = await ClienteConEquipoAsync(admin);
+        await api.RegistrarUsuarioAsync("tecnico1@x.com", RolesDeSistema.TecnicoId);
+        await api.RegistrarUsuarioAsync("tecnico2@x.com", RolesDeSistema.TecnicoId);
+        var tecnicos = (await admin.GetFromJsonAsync<List<UsuarioResumen>>($"{Ruta}/tecnicos"))!;
+        var t1 = tecnicos.Single(t => t.Nombre == "tecnico1@x.com").Id;
+        var t2 = tecnicos.Single(t => t.Nombre == "tecnico2@x.com").Id;
+
+        async Task<Guid> CrearAsync(Guid tecnico)
+        {
+            var creada = await admin.PostAsJsonAsync(Ruta, Orden(ana.Id, iphone.Id, tecnico: tecnico));
+            Assert.Equal(HttpStatusCode.Created, creada.StatusCode);
+            return (await creada.Content.ReadFromJsonAsync<OrdenReparacionDto>())!.Id;
+        }
+
+        async Task LlevarAsync(Guid ordenId, params string[] cadena)
+        {
+            foreach (var estado in cadena)
+            {
+                var respuesta = await admin.PostAsJsonAsync($"{Ruta}/{ordenId}/estado", new CambiarEstadoRequest(estado));
+                Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+            }
+        }
+
+        string[] hastaEntregado = ["en_pruebas", "en_diagnostico", "irreparable", "entregado"];
+
+        await CrearAsync(t1);
+        await LlevarAsync(await CrearAsync(t1), hastaEntregado);
+        await LlevarAsync(await CrearAsync(t1), "cancelado");
+        await LlevarAsync(await CrearAsync(t2), "en_pruebas");
+        await LlevarAsync(await CrearAsync(t2), hastaEntregado);
+        return (t1, t2);
+    }
+
+    private static async Task<long[]> NumerosAsync(HttpClient cliente, string consulta) =>
+        (await cliente.GetFromJsonAsync<PagedResult<OrdenResumenDto>>($"{Ruta}{consulta}"))!.Items.Select(o => o.Numero).ToArray();
+
+    [Fact]
+    public async Task El_listado_filtra_por_tecnico_y_combina_con_solo_activas()
+    {
+        using var api = await TestApi.CrearAsync(postgres);
+        var admin = api.ClienteAdministrador();
+        var (t1, t2) = await OrdenesDeDosTecnicosAsync(api, admin);
+
+        Assert.Equal(new long[] { 5, 4 }, await NumerosAsync(admin, $"?tecnicoId={t2}"));
+        Assert.Equal(new long[] { 3, 2, 1 }, await NumerosAsync(admin, $"?tecnicoId={t1}"));
+        Assert.Equal(new long[] { 1 }, await NumerosAsync(admin, $"?tecnicoId={t1}&soloActivas=true"));
+        Assert.Equal(new long[] { 4 }, await NumerosAsync(admin, $"?tecnicoId={t2}&soloActivas=true"));
+        Assert.Empty(await NumerosAsync(admin, $"?tecnicoId={Guid.NewGuid()}"));
+    }
+
+    [Fact]
+    public async Task Solo_activas_excluye_entregadas_y_canceladas_y_sin_el_parametro_se_listan_todas()
+    {
+        using var api = await TestApi.CrearAsync(postgres);
+        var admin = api.ClienteAdministrador();
+        await OrdenesDeDosTecnicosAsync(api, admin);
+
+        var activas = (await admin.GetFromJsonAsync<PagedResult<OrdenResumenDto>>($"{Ruta}?soloActivas=true"))!;
+        Assert.Equal(new long[] { 4, 1 }, activas.Items.Select(o => o.Numero));
+        Assert.Equal(2, activas.TotalCount);
+        Assert.DoesNotContain(activas.Items, o => o.Estado is "entregado" or "cancelado");
+
+        // Sin el parámetro (o en false) es el comportamiento de siempre: la ficha del cliente necesita ver todo.
+        var todas = (await admin.GetFromJsonAsync<PagedResult<OrdenResumenDto>>(Ruta))!;
+        Assert.Equal(new long[] { 5, 4, 3, 2, 1 }, todas.Items.Select(o => o.Numero));
+        Assert.Equal(5, todas.TotalCount);
+        Assert.Contains(todas.Items, o => o.Estado == "entregado");
+        Assert.Contains(todas.Items, o => o.Estado == "cancelado");
+        Assert.Equal(new long[] { 5, 4, 3, 2, 1 }, await NumerosAsync(admin, "?soloActivas=false"));
+    }
+
     [Fact]
     public async Task Matriz_de_autorizacion_de_reparaciones()
     {

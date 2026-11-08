@@ -23,6 +23,8 @@ export function ReparacionesPage() {
   const me = useMe();
   const router = useRouter();
   const puedeRecibir = me.kind === "listo" && me.me.permisos.includes("reparaciones.crear");
+  const esTecnico = me.kind === "listo" && me.me.rol === "Técnico";
+  const perfilCargando = me.kind === "cargando";
 
   const [pagina, setPagina] = useState(1);
   const [lista, setLista] = useState<Lista | null>(null);
@@ -30,20 +32,35 @@ export function ReparacionesPage() {
   const [busqueda, setBusqueda] = useState("");
   const [candidatos, setCandidatos] = useState<Cliente[] | null>(null);
   const [cliente, setCliente] = useState<Cliente | null>(null);
+  // Filtros de la bandeja: por defecto solo las activas y, si es técnico, solo las suyas.
+  const [soloMias, setSoloMias] = useState(true);
+  const [soloActivas, setSoloActivas] = useState(true);
+  const tecnicoId = esTecnico && soloMias && me.kind === "listo" && me.me.usuarioId ? me.me.usuarioId : undefined;
 
   useEffect(() => {
-    if (!user) return;
+    // Se espera al perfil para saber si es técnico antes del primer pedido (y no pedir dos veces).
+    if (!user || perfilCargando) return;
     const controller = new AbortController();
     user
       .getIdToken()
-      .then((token) => listarOrdenes(token, { page: pagina }, controller.signal))
+      .then((token) => listarOrdenes(token, { page: pagina, tecnicoId, soloActivas }, controller.signal))
       .then((r) => setLista({ pagina, kind: "listo", items: r.items, totalPages: r.totalPages, total: r.totalCount }))
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
         setLista({ pagina, kind: error instanceof ApiError && error.status === 403 ? "sinPermiso" : "error" });
       });
     return () => controller.abort();
-  }, [user, pagina]);
+  }, [user, perfilCargando, pagina, tecnicoId, soloActivas]);
+
+  function cambiarSoloMias(valor: boolean) {
+    setSoloMias(valor);
+    setPagina(1);
+  }
+
+  function cambiarSoloActivas(valor: boolean) {
+    setSoloActivas(valor);
+    setPagina(1);
+  }
 
   async function buscar(evento: FormEvent) {
     evento.preventDefault();
@@ -127,6 +144,19 @@ export function ReparacionesPage() {
       {cliente && (
         <NuevaOrdenForm cliente={cliente} onCreada={(orden) => router.push(`/reparaciones/${orden.id}`)} onCancelar={cancelar} />
       )}
+
+      <div className="chips" role="group" aria-label="Filtros de reparaciones">
+        {esTecnico && (
+          <label className="chip">
+            <input type="checkbox" checked={soloMias} onChange={(e) => cambiarSoloMias(e.target.checked)} />
+            <span>Solo mis reparaciones</span>
+          </label>
+        )}
+        <label className="chip">
+          <input type="checkbox" checked={soloActivas} onChange={(e) => cambiarSoloActivas(e.target.checked)} />
+          <span>Solo activas</span>
+        </label>
+      </div>
 
       {lista?.kind === "sinPermiso" && (
         <p className="form-error" role="alert">

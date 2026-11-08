@@ -33,9 +33,9 @@ public sealed class ListarOrdenesHandler(
     IDispositivoRepositorio dispositivos,
     IDirectorioDeUsuarios directorio)
 {
-    public async Task<PagedResult<OrdenResumenDto>> HandleAsync(Guid? clienteId, PageRequest pagina, CancellationToken ct)
+    public async Task<PagedResult<OrdenResumenDto>> HandleAsync(FiltroDeOrdenes filtro, PageRequest pagina, CancellationToken ct)
     {
-        var resultado = await ordenes.ListarAsync(clienteId, pagina, ct);
+        var resultado = await ordenes.ListarAsync(filtro, pagina, ct);
         var armador = new ArmadorDeOrdenes(clientes, dispositivos, directorio);
         var items = await armador.ResumenesAsync(resultado.Items, ct);
         return new PagedResult<OrdenResumenDto>(items, resultado.Page, resultado.PageSize, resultado.TotalCount);

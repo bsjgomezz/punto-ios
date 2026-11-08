@@ -24,9 +24,9 @@
     "semantic_hash": ""
   },
   "docs/ROADMAP.md": {
-    "mtime": 1794099429.3901565,
-    "seen": 1794099471.868331,
-    "ast_hash": "99a829c792295d86d071988b8c2da04d",
+    "mtime": 1794155019.016099,
+    "seen": 1794155069.8872564,
+    "ast_hash": "9036fbba8972c45e59bcb53adeb2f481",
     "semantic_hash": ""
   },
   "docs/SDD.md": {
@@ -480,9 +480,9 @@
     "semantic_hash": ""
   },
   "backend/src/PuntoIOS.Api/Extensions/ServiceCollectionExtensions.cs": {
-    "mtime": 1794093843.4866152,
-    "seen": 1794099471.868331,
-    "ast_hash": "7a9e2bd21b68884dff7896a8f210cb9a",
+    "mtime": 1794151760.0079732,
+    "seen": 1794155069.8872564,
+    "ast_hash": "c4173bd7311cdd011a02401d327db6db",
     "semantic_hash": ""
   },
   "backend/src/PuntoIOS.Application/Common/Results/Resultado.cs": {
@@ -546,9 +546,9 @@
     "semantic_hash": ""
   },
   "backend/src/PuntoIOS.Domain/Identidad/Permisos.cs": {
-    "mtime": 1794092343.3093882,
-    "seen": 1794093364.9745078,
-    "ast_hash": "255d442953489ec9771be778e5d7f2ff",
+    "mtime": 1794151712.4126751,
+    "seen": 1794155069.8872564,
+    "ast_hash": "b423a6498e1b78c0d68927f5a6b5caed",
     "semantic_hash": ""
   },
   "backend/src/PuntoIOS.Domain/Identidad/Rol.cs": {
@@ -582,9 +582,9 @@
     "semantic_hash": ""
   },
   "backend/src/PuntoIOS.Infrastructure/Persistence/Configurations/IdentidadConfiguraciones.cs": {
-    "mtime": 1794092470.5658257,
-    "seen": 1794093364.9745078,
-    "ast_hash": "e4da15530f6459403fa7b4aad3889c61",
+    "mtime": 1794151722.6492343,
+    "seen": 1794155069.8872564,
+    "ast_hash": "13bba3ec9a5e3fe425fcfdaa99b2e45f",
     "semantic_hash": ""
   },
   "backend/src/PuntoIOS.Infrastructure/Persistence/DesignTimeDbContextFactory.cs": {
@@ -612,9 +612,9 @@
     "semantic_hash": ""
   },
   "backend/src/PuntoIOS.Infrastructure/Persistence/Migrations/PuntoIosDbContextModelSnapshot.cs": {
-    "mtime": 1794097716.5350294,
-    "seen": 1794099471.868331,
-    "ast_hash": "5fc7b727cbf6b165b2b3e9f322ebf34d",
+    "mtime": 1794153175.3407314,
+    "seen": 1794155069.8872564,
+    "ast_hash": "022f47ee032bff22b87fe6ccdacaa8d0",
     "semantic_hash": ""
   },
   "backend/src/PuntoIOS.Infrastructure/Persistence/PuntoIosDbContext.cs": {
@@ -642,9 +642,9 @@
     "semantic_hash": ""
   },
   "backend/tests/PuntoIOS.IntegrationTests/UsuariosEndpointTests.cs": {
-    "mtime": 1794092598.6686885,
-    "seen": 1794093364.9745078,
-    "ast_hash": "dcea8d05b6a2e7b92ee9832c0df032b4",
+    "mtime": 1794151922.5667279,
+    "seen": 1794155069.8872564,
+    "ast_hash": "b33b05051e808603dccabf217c9cdcb2",
     "semantic_hash": ""
   },
   "backend/tests/PuntoIOS.UnitTests/Identidad/FakesIdentidad.cs": {
@@ -810,9 +810,9 @@
     "semantic_hash": ""
   },
   "backend/src/PuntoIOS.Domain/Auditoria/RegistroAuditoria.cs": {
-    "mtime": 1794093758.1832209,
-    "seen": 1794099471.868331,
-    "ast_hash": "336b124cfa82762040a4d7605095d064",
+    "mtime": 1794151712.4319887,
+    "seen": 1794155069.8872564,
+    "ast_hash": "3b9aaa95d1e9f38bd5d6633a27d972d8",
     "semantic_hash": ""
   },
   "backend/src/PuntoIOS.Infrastructure/Persistence/AuditoriaRepositorio.cs": {
@@ -1158,9 +1158,9 @@
     "semantic_hash": ""
   },
   "backend/src/PuntoIOS.Api/Controllers/ReparacionesController.cs": {
-    "mtime": 1794093843.462373,
-    "seen": 1794099471.868331,
-    "ast_hash": "58217cca499b3e39fe27901763d0b67a",
+    "mtime": 1794151759.9953797,
+    "seen": 1794155069.8872564,
+    "ast_hash": "69453df3ba6d628b02d338033794cbe3",
     "semantic_hash": ""
   },
   "backend/src/PuntoIOS.Application/Features/Reparaciones/ConsultarOrdenes/ConsultarOrdenesHandlers.cs": {
@@ -1170,9 +1170,9 @@
     "semantic_hash": ""
   },
   "backend/src/PuntoIOS.Application/Features/Reparaciones/OrdenDtos.cs": {
-    "mtime": 1794093799.037209,
-    "seen": 1794099471.868331,
-    "ast_hash": "ed0786e9f92c80717cb8abee60d2da14",
+    "mtime": 1794151742.1775224,
+    "seen": 1794155069.8872564,
+    "ast_hash": "dc5e1aac880f29e60e27376d380d440f",
     "semantic_hash": ""
   },
   "backend/src/PuntoIOS.Application/Features/Reparaciones/Puertos/IOrdenReparacionRepositorio.cs": {
@@ -1194,15 +1194,15 @@
     "semantic_hash": ""
   },
   "backend/src/PuntoIOS.Domain/Reparaciones/OrdenReparacion.cs": {
-    "mtime": 1794093764.3793013,
-    "seen": 1794099471.868331,
-    "ast_hash": "2350c18cc849b819ca0e6ef12c531a6d",
+    "mtime": 1794151712.4126751,
+    "seen": 1794155069.8872564,
+    "ast_hash": "f01f09df317ca4688460c7e7a48bc31c",
     "semantic_hash": ""
   },
   "backend/src/PuntoIOS.Domain/Reparaciones/TiposDeReparacion.cs": {
-    "mtime": 1794092343.2731273,
-    "seen": 1794093364.9745078,
-    "ast_hash": "3a1130ac672f7e355474667a0fe5943c",
+    "mtime": 1794151712.3964107,
+    "seen": 1794155069.8872564,
+    "ast_hash": "986e0e39a63e5daa09a0e4fac9076f74",
     "semantic_hash": ""
   },
   "backend/src/PuntoIOS.Infrastructure/Persistence/Configurations/ReparacionesConfiguraciones.cs": {
@@ -1254,9 +1254,9 @@
     "semantic_hash": ""
   },
   "frontend/src/features/reparaciones/api.ts": {
-    "mtime": 1794098104.648651,
-    "seen": 1794099471.868331,
-    "ast_hash": "b88da49d0032ff993b4c44d16f13020a",
+    "mtime": 1794153953.6039376,
+    "seen": 1794155069.8872564,
+    "ast_hash": "50272cde5825e1e2150eb194a6b80bc9",
     "semantic_hash": ""
   },
   "frontend/src/features/reparaciones/lista-ordenes.tsx": {
@@ -1278,15 +1278,15 @@
     "semantic_hash": ""
   },
   "frontend/src/features/reparaciones/orden-detalle.test.tsx": {
-    "mtime": 1794099281.1386702,
-    "seen": 1794099471.868331,
-    "ast_hash": "d6b21307d6a591227d014bf9a762498b",
+    "mtime": 1794154748.5521126,
+    "seen": 1794155069.8872564,
+    "ast_hash": "c283af824016c60e0953ba470fa3b8bb",
     "semantic_hash": ""
   },
   "frontend/src/features/reparaciones/orden-detalle.tsx": {
-    "mtime": 1794098670.647399,
-    "seen": 1794099471.868331,
-    "ast_hash": "c1f538bd129dd7cb851c2d1638ffbbb8",
+    "mtime": 1794153976.5794015,
+    "seen": 1794155069.8872564,
+    "ast_hash": "c0449edec258d0a3547321443a3f0741",
     "semantic_hash": ""
   },
   "frontend/src/features/reparaciones/ordenes-cliente.tsx": {
@@ -1371,6 +1371,48 @@
     "mtime": 1794097532.6102464,
     "seen": 1794099471.868331,
     "ast_hash": "52bd6a4da6987e1a4d31508e237518d1",
+    "semantic_hash": ""
+  },
+  "backend/src/PuntoIOS.Application/Features/Reparaciones/CambiarEstado/CambiarEstadoOrdenHandler.cs": {
+    "mtime": 1794151742.2165747,
+    "seen": 1794155069.8872564,
+    "ast_hash": "db6f93206b4434a2268e71c5bc6d0928",
+    "semantic_hash": ""
+  },
+  "backend/src/PuntoIOS.Domain/Reparaciones/MaquinaDeEstados.cs": {
+    "mtime": 1794151712.3964107,
+    "seen": 1794155069.8872564,
+    "ast_hash": "62f9d6b4b2b0dad830ace4499286aba0",
+    "semantic_hash": ""
+  },
+  "backend/src/PuntoIOS.Infrastructure/Persistence/Migrations/20261108155255_PermisoCambiarEstado.Designer.cs": {
+    "mtime": 1794153175.3402052,
+    "seen": 1794155069.8872564,
+    "ast_hash": "f7d2442ed3dc2f9020d876c41a4ac99c",
+    "semantic_hash": ""
+  },
+  "backend/src/PuntoIOS.Infrastructure/Persistence/Migrations/20261108155255_PermisoCambiarEstado.cs": {
+    "mtime": 1794153175.3396668,
+    "seen": 1794155069.8872564,
+    "ast_hash": "6584cd3e99c7424d1bd0915b5a8de277",
+    "semantic_hash": ""
+  },
+  "backend/tests/PuntoIOS.IntegrationTests/CambiarEstadoEndpointTests.cs": {
+    "mtime": 1794151922.4963126,
+    "seen": 1794155069.8872564,
+    "ast_hash": "24a90622fdae95de36f841efa5e2587c",
+    "semantic_hash": ""
+  },
+  "backend/tests/PuntoIOS.UnitTests/Reparaciones/CambiarEstadoOrdenHandlerTests.cs": {
+    "mtime": 1794151876.4167943,
+    "seen": 1794155069.8872564,
+    "ast_hash": "b31aa37b84d16f1fa9f5cae5ce16d821",
+    "semantic_hash": ""
+  },
+  "backend/tests/PuntoIOS.UnitTests/Reparaciones/MaquinaDeEstadosTests.cs": {
+    "mtime": 1794151834.2138278,
+    "seen": 1794155069.8872564,
+    "ast_hash": "dfb843655ed309b58a5af6f18a8ce577",
     "semantic_hash": ""
   },
   "frontend/package-lock.json": {

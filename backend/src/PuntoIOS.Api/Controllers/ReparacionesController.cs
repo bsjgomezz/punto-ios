@@ -8,7 +8,9 @@ using PuntoIOS.Application.Features.Reparaciones;
 using PuntoIOS.Application.Features.Reparaciones.ActualizarDatosTecnicos;
 using PuntoIOS.Application.Features.Reparaciones.CambiarEstado;
 using PuntoIOS.Application.Features.Reparaciones.ConsultarOrdenes;
+using PuntoIOS.Application.Features.Reparaciones.CrearVersionPresupuesto;
 using PuntoIOS.Application.Features.Reparaciones.Fotos;
+using PuntoIOS.Application.Features.Reparaciones.ListarVersionesPresupuesto;
 using PuntoIOS.Application.Features.Reparaciones.Puertos;
 using PuntoIOS.Application.Features.Reparaciones.RecibirEquipo;
 using PuntoIOS.Application.Features.Reparaciones.VerDesbloqueo;
@@ -46,6 +48,12 @@ public sealed record ActualizarDatosTecnicosRequest(
     List<string>? ComponentesAfectados,
     string? NotasInternas);
 
+/// <summary>Ítem del presupuesto. <c>Tipo</c>: "mano_obra" o "repuesto".</summary>
+public sealed record ItemPresupuestoRequest(string? Descripcion, string? Tipo, decimal Monto);
+
+/// <summary>Versión nueva del presupuesto (de 1 a 30 ítems).</summary>
+public sealed record CrearVersionPresupuestoRequest(List<ItemPresupuestoRequest>? Items);
+
 [ApiController]
 [Route("api/v1/reparaciones")]
 public sealed class ReparacionesController(
@@ -59,7 +67,9 @@ public sealed class ReparacionesController(
     ListarFotosHandler listarFotos,
     ObtenerFotoHandler obtenerFoto,
     CambiarEstadoOrdenHandler cambiarEstado,
-    ActualizarDatosTecnicosHandler actualizarDatosTecnicos) : ControllerBase
+    ActualizarDatosTecnicosHandler actualizarDatosTecnicos,
+    CrearVersionPresupuestoHandler crearPresupuesto,
+    ListarVersionesPresupuestoHandler listarPresupuestos) : ControllerBase
 {
     /// <summary>
     /// Órdenes de la más nueva a la más vieja. Con <c>clienteId</c>, solo las de ese cliente; con <c>tecnicoId</c>,
@@ -162,6 +172,31 @@ public sealed class ReparacionesController(
             new ActualizarDatosTecnicosCommand(
                 id, request.Pruebas, request.Diagnostico, request.Mediciones, request.ComponentesAfectados, request.NotasInternas),
             ct);
+        return resultado.EsExitoso ? Ok(resultado.Valor) : resultado.Error!.ToProblem();
+    }
+
+    /// <summary>
+    /// Crea una versión nueva del presupuesto (nunca se edita una existente). Según el estado, la orden avanza
+    /// (por ejemplo, de esperando presupuesto a presupuesto enviado). No se puede en una orden entregada o cancelada.
+    /// </summary>
+    [HttpPost("{id:guid}/presupuestos")]
+    [Authorize(Policy = Permisos.PresupuestosGestionar)]
+    public async Task<ActionResult<OrdenReparacionDto>> CrearVersionPresupuesto(
+        Guid id, CrearVersionPresupuestoRequest request, CancellationToken ct)
+    {
+        var resultado = await crearPresupuesto.HandleAsync(
+            new CrearVersionPresupuestoCommand(
+                id, request.Items?.Select(i => new ItemPresupuestoInput(i?.Descripcion, i?.Tipo, i?.Monto ?? 0)).ToList()),
+            ct);
+        return resultado.EsExitoso ? Ok(resultado.Valor) : resultado.Error!.ToProblem();
+    }
+
+    /// <summary>Todas las versiones de presupuesto de la orden, de la más nueva a la más vieja.</summary>
+    [HttpGet("{id:guid}/presupuestos")]
+    [Authorize(Policy = Permisos.ReparacionesVer)]
+    public async Task<ActionResult<IReadOnlyList<VersionDePresupuestoDto>>> ListarVersionesPresupuesto(Guid id, CancellationToken ct)
+    {
+        var resultado = await listarPresupuestos.HandleAsync(id, ct);
         return resultado.EsExitoso ? Ok(resultado.Valor) : resultado.Error!.ToProblem();
     }
 

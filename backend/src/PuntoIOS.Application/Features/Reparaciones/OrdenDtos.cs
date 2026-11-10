@@ -3,6 +3,7 @@ using PuntoIOS.Application.Features.Clientes.Puertos;
 using PuntoIOS.Application.Features.Dispositivos;
 using PuntoIOS.Application.Features.Dispositivos.Puertos;
 using PuntoIOS.Application.Features.Identidad.Puertos;
+using PuntoIOS.Application.Features.Reparaciones.Puertos;
 using PuntoIOS.Domain.Reparaciones;
 
 namespace PuntoIOS.Application.Features.Reparaciones;
@@ -12,6 +13,7 @@ namespace PuntoIOS.Application.Features.Reparaciones;
 /// <c>EstadosDisponibles</c>: estados a los que se puede pasar desde el actual.
 /// Es la vista interna del taller: incluye <c>NotasInternas</c>, que son privadas. Un futuro DTO público para el
 /// cliente (portal de seguimiento, S18) NO debe reutilizar este record ni copiar <c>NotasInternas</c>.
+/// <c>PresupuestoVigente</c>: la versión de presupuesto de número más alto, o null si todavía no se presupuestó.
 /// </summary>
 public sealed record OrdenReparacionDto(
     Guid Id,
@@ -34,12 +36,34 @@ public sealed record OrdenReparacionDto(
     string? Diagnostico,
     string? Mediciones,
     IReadOnlyList<string> ComponentesAfectados,
-    string? NotasInternas);
+    string? NotasInternas,
+    VersionDePresupuestoDto? PresupuestoVigente);
 
 /// <summary>Checklist de ingreso. <c>Items</c>: código → resultado (solo los revisados).</summary>
 public sealed record ChecklistDto(IReadOnlyDictionary<string, bool> Items, int? SaludBateria, string? Notas);
 
 public sealed record FotoDto(Guid Id, DateTimeOffset CreadoEn);
+
+public sealed record ItemPresupuestoDto(string Descripcion, string Tipo, decimal Monto);
+
+/// <summary>Una versión del presupuesto de una orden. <c>CreadoPor</c>: nombre de quien la creó.</summary>
+public sealed record VersionDePresupuestoDto(
+    Guid Id,
+    int Numero,
+    IReadOnlyList<ItemPresupuestoDto> Items,
+    decimal Total,
+    string? CreadoPor,
+    DateTimeOffset CreadoEn)
+{
+    public static VersionDePresupuestoDto Desde(VersionDePresupuesto version, IReadOnlyDictionary<Guid, string> nombres) =>
+        new(
+            version.Id,
+            version.Numero,
+            version.Items.Select(i => new ItemPresupuestoDto(i.Descripcion, i.Tipo, i.Monto)).ToList(),
+            version.Total,
+            version.CreadoPorUsuarioId is { } c ? nombres.GetValueOrDefault(c) : null,
+            version.CreadoEn);
+}
 
 /// <summary>Fila de los listados de órdenes.</summary>
 public sealed record OrdenResumenDto(
@@ -53,15 +77,20 @@ public sealed record OrdenResumenDto(
     DateOnly? FechaEstimadaEntrega,
     DateTimeOffset CreadoEn);
 
-/// <summary>Arma los DTO buscando en una sola consulta por tipo los clientes, equipos y usuarios involucrados.</summary>
+/// <summary>
+/// Arma los DTO buscando en una sola consulta por tipo los clientes, equipos, presupuestos vigentes y usuarios involucrados.
+/// </summary>
 internal sealed class ArmadorDeOrdenes(
+    IOrdenReparacionRepositorio repositorioDeOrdenes,
     IClienteRepositorio clientes,
     IDispositivoRepositorio dispositivos,
     IDirectorioDeUsuarios directorio)
 {
     public async Task<IReadOnlyList<OrdenReparacionDto>> CompletasAsync(IReadOnlyList<OrdenReparacion> ordenes, CancellationToken ct)
     {
-        var (porCliente, porEquipo, nombres) = await BuscarAsync(ordenes, ct);
+        var vigentes = (await repositorioDeOrdenes.ObtenerVersionesVigentesPresupuestoAsync(ordenes.Select(o => o.Id), ct))
+            .ToDictionary(v => v.OrdenId);
+        var (porCliente, porEquipo, nombres) = await BuscarAsync(ordenes, vigentes.Values.Select(v => v.CreadoPorUsuarioId), ct);
         return ordenes
             .Select(o => new OrdenReparacionDto(
                 o.Id,
@@ -84,13 +113,14 @@ internal sealed class ArmadorDeOrdenes(
                 o.Diagnostico,
                 o.Mediciones,
                 o.ComponentesAfectados,
-                o.NotasInternas)) // Solo para el personal: no pasar NotasInternas a un DTO público (S18).
+                o.NotasInternas, // Solo para el personal: no pasar NotasInternas a un DTO público (S18).
+                vigentes.TryGetValue(o.Id, out var vigente) ? VersionDePresupuestoDto.Desde(vigente, nombres) : null))
             .ToList();
     }
 
     public async Task<IReadOnlyList<OrdenResumenDto>> ResumenesAsync(IReadOnlyList<OrdenReparacion> ordenes, CancellationToken ct)
     {
-        var (porCliente, porEquipo, nombres) = await BuscarAsync(ordenes, ct);
+        var (porCliente, porEquipo, nombres) = await BuscarAsync(ordenes, [], ct);
         return ordenes
             .Select(o =>
             {
@@ -111,7 +141,7 @@ internal sealed class ArmadorDeOrdenes(
     }
 
     private async Task<(Dictionary<Guid, Domain.Clientes.Cliente>, Dictionary<Guid, Domain.Clientes.Dispositivo>, IReadOnlyDictionary<Guid, string>)>
-        BuscarAsync(IReadOnlyList<OrdenReparacion> ordenes, CancellationToken ct)
+        BuscarAsync(IReadOnlyList<OrdenReparacion> ordenes, IEnumerable<Guid?> otrosUsuarios, CancellationToken ct)
     {
         var porCliente = (await clientes.ObtenerPorIdsAsync(ordenes.Select(o => o.ClienteId).Distinct(), ct))
             .ToDictionary(c => c.Id);
@@ -119,6 +149,7 @@ internal sealed class ArmadorDeOrdenes(
             .ToDictionary(d => d.Id);
         var usuarios = ordenes
             .SelectMany(o => new[] { o.TecnicoUsuarioId, o.CreadoPorUsuarioId })
+            .Concat(otrosUsuarios)
             .Where(id => id is not null)
             .Select(id => id!.Value)
             .Distinct();

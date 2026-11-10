@@ -19,7 +19,9 @@ using PuntoIOS.Application.Features.Identidad.ActualizarUsuario;
 using PuntoIOS.Application.Features.Reparaciones.ActualizarDatosTecnicos;
 using PuntoIOS.Application.Features.Reparaciones.CambiarEstado;
 using PuntoIOS.Application.Features.Reparaciones.ConsultarOrdenes;
+using PuntoIOS.Application.Features.Reparaciones.CrearVersionPresupuesto;
 using PuntoIOS.Application.Features.Reparaciones.Fotos;
+using PuntoIOS.Application.Features.Reparaciones.ListarVersionesPresupuesto;
 using PuntoIOS.Application.Features.Reparaciones.RecibirEquipo;
 using PuntoIOS.Application.Features.Reparaciones.VerDesbloqueo;
 using PuntoIOS.Application.Features.Identidad.IdentificarUsuario;
@@ -70,6 +72,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ObtenerFotoHandler>();
         services.AddScoped<CambiarEstadoOrdenHandler>();
         services.AddScoped<ActualizarDatosTecnicosHandler>();
+        services.AddScoped<CrearVersionPresupuestoHandler>();
+        services.AddScoped<ListarVersionesPresupuestoHandler>();
         return services;
     }
 

@@ -30,6 +30,8 @@ public sealed class PuntoIosDbContext(DbContextOptions<PuntoIosDbContext> option
 
     public DbSet<FotoOrden> FotosOrden => Set<FotoOrden>();
 
+    public DbSet<VersionDePresupuesto> VersionesPresupuesto => Set<VersionDePresupuesto>();
+
     public DbSet<RegistroAuditoria> Auditoria => Set<RegistroAuditoria>();
 
     /// <summary>Local de la solicitud actual; lo usa el filtro global de las entidades operativas.</summary>
@@ -45,6 +47,7 @@ public sealed class PuntoIosDbContext(DbContextOptions<PuntoIosDbContext> option
         modelBuilder.Entity<Dispositivo>().HasQueryFilter(d => d.LocalId == LocalActualId);
         modelBuilder.Entity<OrdenReparacion>().HasQueryFilter(o => o.LocalId == LocalActualId);
         modelBuilder.Entity<FotoOrden>().HasQueryFilter(f => f.LocalId == LocalActualId);
+        modelBuilder.Entity<VersionDePresupuesto>().HasQueryFilter(v => v.LocalId == LocalActualId);
         modelBuilder.Entity<RegistroAuditoria>().HasQueryFilter(r => r.LocalId == LocalActualId);
     }
 }

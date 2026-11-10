@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BackLink } from "@/components/back-link";
 import { useAuth } from "@/features/auth/auth-provider";
 import { SessionBar } from "@/features/auth/session-bar";
@@ -13,10 +13,15 @@ import {
   CHECKLIST_CATALOGO,
   NOMBRES_DESBLOQUEO,
   RAZON_SIN_FECHA,
+  TIPOS_DE_ITEM_PRESUPUESTO,
   actualizarDatosTecnicos,
   cambiarEstadoDeOrden,
+  crearVersionPresupuesto,
   formatearFecha,
+  formatearMonto,
   listarFotos,
+  listarVersionesPresupuesto,
+  nombreDeTipoItemPresupuesto,
   nombreDeEstado,
   nombreDeTipo,
   obtenerFotoUrl,
@@ -25,8 +30,10 @@ import {
   verDesbloqueo,
   type DatosTecnicos,
   type Foto,
+  type ItemPresupuesto,
   type Orden,
   type TipoDesbloqueo,
+  type VersionDePresupuesto,
 } from "./api";
 import { PatronDesbloqueo } from "./patron-desbloqueo";
 
@@ -43,6 +50,7 @@ const ACCIONES: Record<string, string> = {
   desbloqueo_consultado: "Se vio el código de desbloqueo",
   estado_cambiado: "Cambió el estado",
   editado: "Editó datos de la orden",
+  presupuesto_creado: "Presupuesto creado",
 };
 
 /** Nombre para mostrar de cada campo auditado de la orden (snake_case en el backend). */
@@ -52,6 +60,8 @@ const NOMBRES_DE_CAMPO: Record<string, string> = {
   mediciones: "Mediciones",
   componentes_afectados: "Componentes afectados",
   notas_internas: "Notas internas",
+  version_presupuesto: "Versión del presupuesto",
+  total_presupuesto: "Total del presupuesto",
 };
 
 function historialDeOrden(token: string, id: string, signal?: AbortSignal) {
@@ -68,6 +78,31 @@ function mensajeDeErrorDeDatosTecnicos(error: unknown): string {
   if (error instanceof ApiError && error.status === 403) return "Tu rol no permite editar los datos técnicos de la orden.";
   if (error instanceof ApiError && error.problem?.title) return error.problem.title;
   return "No se pudieron guardar los datos técnicos. Verificá la conexión e intentá de nuevo.";
+}
+
+function mensajeDeErrorDePresupuesto(error: unknown): string {
+  if (error instanceof ApiError && error.status === 403) return "Tu rol no permite crear presupuestos de la orden.";
+  if (error instanceof ApiError && error.problem?.title) return error.problem.title;
+  return "No se pudo guardar el presupuesto. Verificá la conexión e intentá de nuevo.";
+}
+
+/** Una fila del editor de ítems del presupuesto: el monto va como string, tal cual está en el input. */
+type FilaPresupuesto = { clave: number; tipo: string; descripcion: string; monto: string };
+
+const filaVacia = (clave: number): FilaPresupuesto => ({ clave, tipo: TIPOS_DE_ITEM_PRESUPUESTO[0].codigo, descripcion: "", monto: "" });
+
+const montoDeFila = (fila: FilaPresupuesto) => {
+  const monto = Number(fila.monto);
+  return fila.monto.trim() !== "" && Number.isFinite(monto) ? monto : 0;
+};
+
+const filaCompleta = (fila: FilaPresupuesto) => fila.descripcion.trim() !== "" && montoDeFila(fila) > 0;
+
+/** Las filas que quedaron del todo vacías no se mandan; el resto va tal cual y lo valida el backend. */
+function itemsDeFilas(filas: FilaPresupuesto[]): ItemPresupuesto[] {
+  return filas
+    .filter((f) => f.descripcion.trim() !== "" || f.monto.trim() !== "")
+    .map((f) => ({ tipo: f.tipo, descripcion: f.descripcion.trim(), monto: montoDeFila(f) }));
 }
 
 /** Estado del formulario de datos técnicos: los textos van como string ("" si no hay nada). */
@@ -141,6 +176,21 @@ function TextoDeRegistro({ registro }: { registro: Registro }) {
       </span>
     );
   }
+  if (registro.accion === "presupuesto_creado" && registro.cambios && registro.cambios.length > 0) {
+    const version = registro.cambios.find((c) => c.campo === "version_presupuesto")?.nuevo;
+    const total = registro.cambios.find((c) => c.campo === "total_presupuesto")?.nuevo;
+    return (
+      <span>
+        Creó la versión <strong>{version ?? "?"}</strong> del presupuesto
+        {total && (
+          <>
+            {" "}
+            por <strong>{formatearMonto(Number(total))}</strong>
+          </>
+        )}
+      </span>
+    );
+  }
   if (registro.accion === "editado" && registro.cambios && registro.cambios.length > 0) {
     const campos = registro.cambios.map((c) => NOMBRES_DE_CAMPO[c.campo] ?? c.campo).join(", ");
     return (
@@ -158,6 +208,7 @@ export function OrdenDetalle({ id }: { id: string }) {
   const puedeVerDesbloqueo = me.kind === "listo" && me.me.permisos.includes("reparaciones.ver_desbloqueo");
   const puedeCambiarEstado = me.kind === "listo" && me.me.permisos.includes("reparaciones.cambiar_estado");
   const puedeEditarDatosTecnicos = me.kind === "listo" && me.me.permisos.includes("reparaciones.reparar");
+  const puedePresupuestar = me.kind === "listo" && me.me.permisos.includes("presupuestos.gestionar");
 
   const [estado, setEstado] = useState<Estado | null>(null);
   const [recarga, setRecarga] = useState(0);
@@ -174,6 +225,15 @@ export function OrdenDetalle({ id }: { id: string }) {
   const [nuevoComponente, setNuevoComponente] = useState("");
   const [guardandoDatosTecnicos, setGuardandoDatosTecnicos] = useState(false);
   const [errorDatosTecnicos, setErrorDatosTecnicos] = useState<string | null>(null);
+  const siguienteClaveDeFila = useRef(1);
+  const [filasPresupuesto, setFilasPresupuesto] = useState<FilaPresupuesto[]>(() => [filaVacia(0)]);
+  const [guardandoPresupuesto, setGuardandoPresupuesto] = useState(false);
+  const [errorPresupuesto, setErrorPresupuesto] = useState<string | null>(null);
+  // Las versiones anteriores se piden solo cuando se despliegan (la vigente ya viene con la orden).
+  const [versiones, setVersiones] = useState<VersionDePresupuesto[] | null>(null);
+  const [mostrandoVersiones, setMostrandoVersiones] = useState(false);
+  const [cargandoVersiones, setCargandoVersiones] = useState(false);
+  const [errorVersiones, setErrorVersiones] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -278,6 +338,63 @@ export function OrdenDetalle({ id }: { id: string }) {
     }
   }
 
+  function nuevaClaveDeFila() {
+    return siguienteClaveDeFila.current++;
+  }
+
+  function agregarFilaPresupuesto() {
+    setFilasPresupuesto((actuales) => [...actuales, filaVacia(nuevaClaveDeFila())]);
+  }
+
+  function quitarFilaPresupuesto(clave: number) {
+    setFilasPresupuesto((actuales) => actuales.filter((f) => f.clave !== clave));
+  }
+
+  function cambiarFilaPresupuesto(clave: number, campo: "tipo" | "descripcion" | "monto", valor: string) {
+    setFilasPresupuesto((actuales) => actuales.map((f) => (f.clave === clave ? { ...f, [campo]: valor } : f)));
+  }
+
+  async function guardarPresupuesto() {
+    if (!user || !filasPresupuesto.some(filaCompleta)) return;
+    setErrorPresupuesto(null);
+    setGuardandoPresupuesto(true);
+    try {
+      const t = token ?? (await user.getIdToken());
+      const actualizada = await crearVersionPresupuesto(t, id, itemsDeFilas(filasPresupuesto));
+      setEstado((actual) => (actual?.kind === "listo" ? { ...actual, orden: actualizada } : actual));
+      setFilasPresupuesto([filaVacia(nuevaClaveDeFila())]);
+      // La lista de versiones anteriores quedó vieja: se vuelve a pedir la próxima vez que se despliegue.
+      setVersiones(null);
+      setMostrandoVersiones(false);
+      // La versión nueva (y el cambio de estado, si lo hubo) quedan en el historial: se recarga solo eso.
+      const historial = await historialDeOrden(t, id).catch(() => null);
+      if (historial) setEstado((actual) => (actual?.kind === "listo" ? { ...actual, historial: historial.items } : actual));
+    } catch (error) {
+      setErrorPresupuesto(mensajeDeErrorDePresupuesto(error));
+    } finally {
+      setGuardandoPresupuesto(false);
+    }
+  }
+
+  async function alternarVersionesAnteriores() {
+    if (mostrandoVersiones) {
+      setMostrandoVersiones(false);
+      return;
+    }
+    setMostrandoVersiones(true);
+    if (versiones || !user) return;
+    setErrorVersiones(null);
+    setCargandoVersiones(true);
+    try {
+      const t = token ?? (await user.getIdToken());
+      setVersiones(await listarVersionesPresupuesto(t, id));
+    } catch {
+      setErrorVersiones("No se pudieron cargar las versiones anteriores del presupuesto.");
+    } finally {
+      setCargandoVersiones(false);
+    }
+  }
+
   async function mostrarDesbloqueo() {
     if (!user) return;
     setErrorDesbloqueo(null);
@@ -290,6 +407,9 @@ export function OrdenDetalle({ id }: { id: string }) {
   }
 
   const orden = estado?.kind === "listo" ? estado.orden : null;
+  const presupuestoVigente = orden?.presupuestoVigente ?? null;
+  const versionesAnteriores = versiones?.filter((v) => v.id !== presupuestoVigente?.id) ?? [];
+  const totalPresupuestoNuevo = filasPresupuesto.reduce((suma, f) => suma + montoDeFila(f), 0);
 
   return (
     <main className="shell shell-wide">
@@ -597,6 +717,148 @@ export function OrdenDetalle({ id }: { id: string }) {
               )}
             </section>
           )}
+
+          <section aria-label="Presupuesto" className="history">
+            <h2 className="client-form-title">Presupuesto</h2>
+            {presupuestoVigente ? (
+              <div>
+                <p>
+                  <strong>Versión {presupuestoVigente.numero}</strong>
+                </p>
+                <ul className="checklist-resultado" aria-label="Ítems del presupuesto vigente">
+                  {presupuestoVigente.items.map((item, i) => (
+                    <li key={i}>
+                      {nombreDeTipoItemPresupuesto(item.tipo)}: {item.descripcion} — {formatearMonto(item.monto)}
+                    </li>
+                  ))}
+                </ul>
+                <p>
+                  Total: <strong>{formatearMonto(presupuestoVigente.total)}</strong>
+                </p>
+                <p className="client-meta">
+                  Creado{presupuestoVigente.creadoPor ? ` por ${presupuestoVigente.creadoPor}` : ""} el{" "}
+                  {formatoFechaHora.format(new Date(presupuestoVigente.creadoEn))}
+                </p>
+                <div className="form-actions">
+                  <button
+                    type="button"
+                    className="btn btn-quiet btn-small"
+                    aria-expanded={mostrandoVersiones}
+                    onClick={() => void alternarVersionesAnteriores()}
+                  >
+                    {mostrandoVersiones ? "Ocultar versiones anteriores" : "Ver versiones anteriores"}
+                  </button>
+                </div>
+                {mostrandoVersiones && cargandoVersiones && (
+                  <p className="list-count" role="status">
+                    Cargando versiones…
+                  </p>
+                )}
+                {mostrandoVersiones && errorVersiones && (
+                  <p className="form-error" role="alert">
+                    {errorVersiones}
+                  </p>
+                )}
+                {mostrandoVersiones && versiones && (
+                  versionesAnteriores.length === 0 ? (
+                    <p className="list-count">No hay versiones anteriores.</p>
+                  ) : (
+                    <ol className="history-list" aria-label="Versiones anteriores del presupuesto">
+                      {versionesAnteriores.map((v) => (
+                        <li key={v.id} className="history-item">
+                          <p className="history-head">
+                            <span>
+                              Versión {v.numero}: <strong>{formatearMonto(v.total)}</strong>
+                            </span>
+                            <span className="client-meta">
+                              {v.creadoPor ? ` por ${v.creadoPor}` : ""} · {formatoFechaHora.format(new Date(v.creadoEn))}
+                            </span>
+                          </p>
+                        </li>
+                      ))}
+                    </ol>
+                  )
+                )}
+              </div>
+            ) : (
+              <p className="list-count">Todavía no se presupuestó esta orden.</p>
+            )}
+
+            {puedePresupuestar && (
+              <div aria-label="Nueva versión del presupuesto" role="group">
+                <h3 className="client-form-title">Nueva versión</h3>
+                {filasPresupuesto.map((fila, i) => (
+                  <div key={fila.clave} className="form-actions" role="group" aria-label={`Ítem ${i + 1}`}>
+                    <select
+                      aria-label="Tipo"
+                      value={fila.tipo}
+                      disabled={guardandoPresupuesto}
+                      onChange={(e) => cambiarFilaPresupuesto(fila.clave, "tipo", e.target.value)}
+                    >
+                      {TIPOS_DE_ITEM_PRESUPUESTO.map((t) => (
+                        <option key={t.codigo} value={t.codigo}>
+                          {t.nombre}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      aria-label="Descripción"
+                      value={fila.descripcion}
+                      disabled={guardandoPresupuesto}
+                      placeholder="Ej.: cambio de módulo"
+                      onChange={(e) => cambiarFilaPresupuesto(fila.clave, "descripcion", e.target.value)}
+                    />
+                    <input
+                      aria-label="Monto"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      inputMode="decimal"
+                      value={fila.monto}
+                      disabled={guardandoPresupuesto}
+                      onChange={(e) => cambiarFilaPresupuesto(fila.clave, "monto", e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-quiet btn-small"
+                      disabled={guardandoPresupuesto || filasPresupuesto.length === 1}
+                      onClick={() => quitarFilaPresupuesto(fila.clave)}
+                    >
+                      Quitar fila
+                    </button>
+                  </div>
+                ))}
+                <div className="form-actions">
+                  <button
+                    type="button"
+                    className="btn btn-quiet btn-small"
+                    disabled={guardandoPresupuesto}
+                    onClick={agregarFilaPresupuesto}
+                  >
+                    Agregar ítem
+                  </button>
+                </div>
+                <p aria-live="polite">
+                  Total: <strong>{formatearMonto(totalPresupuestoNuevo)}</strong>
+                </p>
+                <div className="form-actions">
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={guardandoPresupuesto || !filasPresupuesto.some(filaCompleta)}
+                    onClick={() => void guardarPresupuesto()}
+                  >
+                    {guardandoPresupuesto ? "Guardando…" : "Guardar presupuesto"}
+                  </button>
+                </div>
+                {errorPresupuesto && (
+                  <p className="form-error" role="alert">
+                    {errorPresupuesto}
+                  </p>
+                )}
+              </div>
+            )}
+          </section>
 
           <section aria-label="Fotos del equipo" className="history">
             <h2 className="client-form-title">Fotos</h2>

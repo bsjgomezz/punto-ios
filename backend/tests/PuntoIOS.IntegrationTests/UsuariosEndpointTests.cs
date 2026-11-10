@@ -22,7 +22,7 @@ public class UsuariosEndpointTests(PostgresFixture postgres) : IClassFixture<Pos
         Assert.Equal(Permisos.Catalogo.Count, roles.Single(r => r.Id == RolesDeSistema.AdministradorId).Permisos.Count);
         Assert.Equal(
             [
-                Permisos.ClientesVer, Permisos.DispositivosVer, Permisos.DispositivosVerImei,
+                Permisos.ClientesVer, Permisos.DispositivosVer, Permisos.DispositivosVerImei, Permisos.PresupuestosGestionar,
                 Permisos.ReparacionesCambiarEstado, Permisos.ReparacionesReparar, Permisos.ReparacionesVer,
                 Permisos.ReparacionesVerDesbloqueo,
             ],
@@ -31,7 +31,7 @@ public class UsuariosEndpointTests(PostgresFixture postgres) : IClassFixture<Pos
             [
                 Permisos.ClientesCrear, Permisos.ClientesEditar, Permisos.ClientesSeguimiento, Permisos.ClientesVer,
                 Permisos.DispositivosCrear, Permisos.DispositivosEditar, Permisos.DispositivosVer, Permisos.DispositivosVerImei,
-                Permisos.ReparacionesCambiarEstado, Permisos.ReparacionesCrear, Permisos.ReparacionesVer,
+                Permisos.PresupuestosGestionar, Permisos.ReparacionesCambiarEstado, Permisos.ReparacionesCrear, Permisos.ReparacionesVer,
             ],
             roles.Single(r => r.Id == RolesDeSistema.RecepcionVentasId).Permisos);
     }

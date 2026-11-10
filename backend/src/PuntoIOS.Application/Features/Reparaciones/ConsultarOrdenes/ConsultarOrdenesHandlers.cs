@@ -22,7 +22,7 @@ public sealed class ObtenerOrdenHandler(
             return Resultado<OrdenReparacionDto>.Falla(TipoError.NoEncontrado, "orden_inexistente", "La orden no existe.");
         }
 
-        var armador = new ArmadorDeOrdenes(clientes, dispositivos, directorio);
+        var armador = new ArmadorDeOrdenes(ordenes, clientes, dispositivos, directorio);
         return Resultado<OrdenReparacionDto>.Ok((await armador.CompletasAsync([orden], ct))[0]);
     }
 }
@@ -36,7 +36,7 @@ public sealed class ListarOrdenesHandler(
     public async Task<PagedResult<OrdenResumenDto>> HandleAsync(FiltroDeOrdenes filtro, PageRequest pagina, CancellationToken ct)
     {
         var resultado = await ordenes.ListarAsync(filtro, pagina, ct);
-        var armador = new ArmadorDeOrdenes(clientes, dispositivos, directorio);
+        var armador = new ArmadorDeOrdenes(ordenes, clientes, dispositivos, directorio);
         var items = await armador.ResumenesAsync(resultado.Items, ct);
         return new PagedResult<OrdenResumenDto>(items, resultado.Page, resultado.PageSize, resultado.TotalCount);
     }

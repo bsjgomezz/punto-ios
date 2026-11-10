@@ -19,6 +19,17 @@ public interface IOrdenReparacionRepositorio
 
     Task<FotoOrden?> ObtenerFotoAsync(Guid ordenId, Guid fotoId, CancellationToken ct);
 
+    void AgregarVersionPresupuesto(VersionDePresupuesto version);
+
+    /// <summary>Todas las versiones de presupuesto de la orden, de la más nueva a la más vieja.</summary>
+    Task<IReadOnlyList<VersionDePresupuesto>> ListarVersionesPresupuestoAsync(Guid ordenId, CancellationToken ct);
+
+    /// <summary>La versión vigente (número más alto), o null si la orden no tiene ninguna.</summary>
+    Task<VersionDePresupuesto?> ObtenerVersionVigentePresupuestoAsync(Guid ordenId, CancellationToken ct);
+
+    /// <summary>La versión vigente de cada orden indicada, en una sola consulta (las órdenes sin presupuesto no figuran).</summary>
+    Task<IReadOnlyList<VersionDePresupuesto>> ObtenerVersionesVigentesPresupuestoAsync(IEnumerable<Guid> ordenIds, CancellationToken ct);
+
     /// <summary>Guarda los cambios. Al guardar una orden nueva, la base le asigna el número.</summary>
     Task GuardarCambiosAsync(CancellationToken ct);
 }

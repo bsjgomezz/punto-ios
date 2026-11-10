@@ -42,6 +42,27 @@ export const ESTADOS: { codigo: string; nombre: string }[] = [
 
 export const nombreDeEstado = (codigo: string) => ESTADOS.find((e) => e.codigo === codigo)?.nombre ?? codigo;
 
+/** Mismo catálogo que el backend (TiposDeItemPresupuesto). */
+export const TIPOS_DE_ITEM_PRESUPUESTO: { codigo: string; nombre: string }[] = [
+  { codigo: "mano_obra", nombre: "Mano de obra" },
+  { codigo: "repuesto", nombre: "Repuesto" },
+];
+
+export const nombreDeTipoItemPresupuesto = (codigo: string) =>
+  TIPOS_DE_ITEM_PRESUPUESTO.find((t) => t.codigo === codigo)?.nombre ?? codigo;
+
+export type ItemPresupuesto = { descripcion: string; tipo: string; monto: number };
+
+/** Una versión del presupuesto. Nunca se edita: para cambiarlo se crea una versión nueva. */
+export type VersionDePresupuesto = {
+  id: string;
+  numero: number;
+  items: ItemPresupuesto[];
+  total: number;
+  creadoPor: string | null;
+  creadoEn: string;
+};
+
 export type TipoDesbloqueo = "pin" | "contrasena" | "patron";
 
 export const NOMBRES_DESBLOQUEO: Record<TipoDesbloqueo, string> = {
@@ -76,6 +97,8 @@ export type Orden = {
   componentesAfectados: string[];
   /** Privadas del taller: no las ve el cliente. */
   notasInternas: string | null;
+  /** La versión de presupuesto de número más alto, o null si todavía no se presupuestó. */
+  presupuestoVigente: VersionDePresupuesto | null;
 };
 
 /** Datos técnicos que carga el técnico. El backend los reemplaza todos juntos: un campo en `null` se borra. */
@@ -146,6 +169,21 @@ export function cambiarEstadoDeOrden(token: string, ordenId: string, nuevoEstado
 /** Reemplaza los datos técnicos de la orden: hay que mandar siempre los cinco campos (lo que no se manda se borra). */
 export function actualizarDatosTecnicos(token: string, ordenId: string, datos: DatosTecnicos): Promise<Orden> {
   return apiPut<Orden>(`/api/v1/reparaciones/${encodeURIComponent(ordenId)}/datos-tecnicos`, token, datos);
+}
+
+/** Crea una versión nueva del presupuesto (nunca se edita una existente); el backend puede mover el estado de la orden. */
+export function crearVersionPresupuesto(token: string, ordenId: string, items: ItemPresupuesto[]): Promise<Orden> {
+  return apiPost<Orden>(`/api/v1/reparaciones/${encodeURIComponent(ordenId)}/presupuestos`, token, { items });
+}
+
+/** Todas las versiones de presupuesto de la orden, de la más nueva a la más vieja. */
+export function listarVersionesPresupuesto(token: string, ordenId: string, signal?: AbortSignal): Promise<VersionDePresupuesto[]> {
+  return apiGet<VersionDePresupuesto[]>(`/api/v1/reparaciones/${encodeURIComponent(ordenId)}/presupuestos`, token, signal);
+}
+
+/** Igual formato que usa el backend para mostrar montos en pesos argentinos. */
+export function formatearMonto(monto: number): string {
+  return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(monto);
 }
 
 export function listarTecnicos(token: string, signal?: AbortSignal): Promise<Persona[]> {

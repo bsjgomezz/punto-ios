@@ -76,3 +76,25 @@ internal sealed class FotoOrdenConfiguration : IEntityTypeConfiguration<FotoOrde
         builder.HasOne<OrdenReparacion>().WithMany().HasForeignKey(f => f.OrdenId).OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+internal sealed class VersionDePresupuestoConfiguration : IEntityTypeConfiguration<VersionDePresupuesto>
+{
+    public void Configure(EntityTypeBuilder<VersionDePresupuesto> builder)
+    {
+        builder.ToTable("versiones_presupuesto");
+        builder.HasKey(v => v.Id);
+        builder.Property(v => v.Id).HasColumnName("id").ValueGeneratedNever();
+        builder.Property(v => v.LocalId).HasColumnName("local_id");
+        builder.Property(v => v.OrdenId).HasColumnName("orden_id");
+        builder.Property(v => v.Numero).HasColumnName("numero");
+        builder.Property(v => v.Total).HasColumnName("total").HasPrecision(12, 2);
+        builder.Property(v => v.CreadoPorUsuarioId).HasColumnName("creado_por_usuario_id");
+        builder.Property(v => v.CreadoEn).HasColumnName("creado_en");
+        builder.OwnsMany(v => v.Items, items => items.ToJson("items"));
+
+        // Dos versiones de la misma orden nunca comparten número (también frena altas simultáneas).
+        builder.HasIndex(v => new { v.OrdenId, v.Numero }).IsUnique();
+        builder.HasOne<Local>().WithMany().HasForeignKey(v => v.LocalId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<OrdenReparacion>().WithMany().HasForeignKey(v => v.OrdenId).OnDelete(DeleteBehavior.Restrict);
+    }
+}

@@ -314,6 +314,11 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         {
                             Codigo = "reparaciones.cambiar_estado",
                             Descripcion = "Cambiar el estado de una orden de reparación (queda registrado)"
+                        },
+                        new
+                        {
+                            Codigo = "presupuestos.gestionar",
+                            Descripcion = "Crear versiones del presupuesto de una orden de reparación (queda registrado)"
                         });
                 });
 
@@ -470,6 +475,11 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         },
                         new
                         {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000001"),
+                            PermisoCodigo = "presupuestos.gestionar"
+                        },
+                        new
+                        {
                             RolId = new Guid("0195a000-0000-7000-8000-000000000002"),
                             PermisoCodigo = "clientes.ver"
                         },
@@ -525,6 +535,11 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         },
                         new
                         {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000002"),
+                            PermisoCodigo = "presupuestos.gestionar"
+                        },
+                        new
+                        {
                             RolId = new Guid("0195a000-0000-7000-8000-000000000003"),
                             PermisoCodigo = "clientes.ver"
                         },
@@ -557,6 +572,11 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         {
                             RolId = new Guid("0195a000-0000-7000-8000-000000000003"),
                             PermisoCodigo = "reparaciones.cambiar_estado"
+                        },
+                        new
+                        {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000003"),
+                            PermisoCodigo = "presupuestos.gestionar"
                         });
                 });
 
@@ -809,6 +829,47 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                     b.ToTable("ordenes_reparacion", (string)null);
                 });
 
+            modelBuilder.Entity("PuntoIOS.Domain.Reparaciones.VersionDePresupuesto", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<Guid?>("CreadoPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("creado_por_usuario_id");
+
+                    b.Property<Guid>("LocalId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("local_id");
+
+                    b.Property<int>("Numero")
+                        .HasColumnType("integer")
+                        .HasColumnName("numero");
+
+                    b.Property<Guid>("OrdenId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("orden_id");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("total");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LocalId");
+
+                    b.HasIndex("OrdenId", "Numero")
+                        .IsUnique();
+
+                    b.ToTable("versiones_presupuesto", (string)null);
+                });
+
             modelBuilder.Entity("PuntoIOS.Domain.Auditoria.RegistroAuditoria", b =>
                 {
                     b.OwnsMany("PuntoIOS.Domain.Auditoria.CambioDeCampo", "Cambios", b1 =>
@@ -955,6 +1016,50 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         });
 
                     b.Navigation("ChecklistItems");
+                });
+
+            modelBuilder.Entity("PuntoIOS.Domain.Reparaciones.VersionDePresupuesto", b =>
+                {
+                    b.HasOne("PuntoIOS.Domain.Locales.Local", null)
+                        .WithMany()
+                        .HasForeignKey("LocalId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PuntoIOS.Domain.Reparaciones.OrdenReparacion", null)
+                        .WithMany()
+                        .HasForeignKey("OrdenId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsMany("PuntoIOS.Domain.Reparaciones.ItemDePresupuesto", "Items", b1 =>
+                        {
+                            b1.Property<Guid>("VersionDePresupuestoId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<string>("Descripcion")
+                                .IsRequired();
+
+                            b1.Property<decimal>("Monto");
+
+                            b1.Property<string>("Tipo")
+                                .IsRequired();
+
+                            b1.HasKey("VersionDePresupuestoId", "__synthesizedOrdinal");
+
+                            b1.ToTable("versiones_presupuesto");
+
+                            b1
+                                .ToJson("items")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("VersionDePresupuestoId");
+                        });
+
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("PuntoIOS.Domain.Identidad.Rol", b =>

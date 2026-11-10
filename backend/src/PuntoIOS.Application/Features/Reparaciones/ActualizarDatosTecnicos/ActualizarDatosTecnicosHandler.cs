@@ -68,7 +68,7 @@ public sealed class ActualizarDatosTecnicosHandler(
             await ordenes.GuardarCambiosAsync(ct);
         }
 
-        var armador = new ArmadorDeOrdenes(clientes, dispositivos, directorio);
+        var armador = new ArmadorDeOrdenes(ordenes, clientes, dispositivos, directorio);
         return Resultado<OrdenReparacionDto>.Ok((await armador.CompletasAsync([orden], ct))[0]);
     }
 

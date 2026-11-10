@@ -65,7 +65,7 @@ public sealed class CambiarEstadoOrdenHandler(
         // El cambio de estado y su registro de auditoría se guardan juntos.
         await ordenes.GuardarCambiosAsync(ct);
 
-        var armador = new ArmadorDeOrdenes(clientes, dispositivos, directorio);
+        var armador = new ArmadorDeOrdenes(ordenes, clientes, dispositivos, directorio);
         return Resultado<OrdenReparacionDto>.Ok((await armador.CompletasAsync([orden], ct))[0]);
     }
 }

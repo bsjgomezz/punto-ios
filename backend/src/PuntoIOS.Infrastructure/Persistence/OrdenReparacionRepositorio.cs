@@ -46,5 +46,29 @@ internal sealed class OrdenReparacionRepositorio(PuntoIosDbContext db) : IOrdenR
     public Task<FotoOrden?> ObtenerFotoAsync(Guid ordenId, Guid fotoId, CancellationToken ct) =>
         db.FotosOrden.FirstOrDefaultAsync(f => f.OrdenId == ordenId && f.Id == fotoId, ct);
 
+    public void AgregarVersionPresupuesto(VersionDePresupuesto version) => db.VersionesPresupuesto.Add(version);
+
+    public async Task<IReadOnlyList<VersionDePresupuesto>> ListarVersionesPresupuestoAsync(Guid ordenId, CancellationToken ct) =>
+        await db.VersionesPresupuesto.Where(v => v.OrdenId == ordenId).OrderByDescending(v => v.Numero).ToListAsync(ct);
+
+    public Task<VersionDePresupuesto?> ObtenerVersionVigentePresupuestoAsync(Guid ordenId, CancellationToken ct) =>
+        db.VersionesPresupuesto.Where(v => v.OrdenId == ordenId).OrderByDescending(v => v.Numero).FirstOrDefaultAsync(ct);
+
+    public async Task<IReadOnlyList<VersionDePresupuesto>> ObtenerVersionesVigentesPresupuestoAsync(
+        IEnumerable<Guid> ordenIds, CancellationToken ct)
+    {
+        var ids = ordenIds.Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return [];
+        }
+
+        // Vigente = no hay otra versión de la misma orden con número mayor.
+        return await db.VersionesPresupuesto
+            .Where(v => ids.Contains(v.OrdenId)
+                && !db.VersionesPresupuesto.Any(otra => otra.OrdenId == v.OrdenId && otra.Numero > v.Numero))
+            .ToListAsync(ct);
+    }
+
     public Task GuardarCambiosAsync(CancellationToken ct) => db.SaveChangesAsync(ct);
 }

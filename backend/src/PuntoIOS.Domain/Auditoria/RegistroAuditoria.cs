@@ -33,6 +33,9 @@ public static class AccionesAuditadas
 
     /// <summary>La orden pasó de un estado a otro (el cambio guarda el anterior y el nuevo).</summary>
     public const string EstadoCambiado = "estado_cambiado";
+
+    /// <summary>Se creó una versión nueva del presupuesto (el cambio guarda versión y total, anteriores y nuevos).</summary>
+    public const string PresupuestoCreado = "presupuesto_creado";
 }
 
 /// <summary>

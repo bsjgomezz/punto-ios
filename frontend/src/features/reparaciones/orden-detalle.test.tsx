@@ -13,6 +13,7 @@ vi.mock("@/features/auth/auth-provider", () => ({
   useAuth: () => ({ user: mocks.user, signOut: vi.fn() }),
 }));
 
+import { formatearMonto } from "./api";
 import { OrdenDetalle } from "./orden-detalle";
 
 const orden = {
@@ -50,6 +51,9 @@ const me = (permisos: string[]) => ({
   rol: "Técnico",
   permisos,
 });
+
+/** Monto como lo deja Testing Library al normalizar el texto (el espacio duro de Intl pasa a ser un espacio común). */
+const montoEnPantalla = (monto: number) => formatearMonto(monto).replace(/\s/g, " ");
 
 const json = (cuerpo: unknown, status = 200) => new Response(JSON.stringify(cuerpo), { status });
 
@@ -346,6 +350,195 @@ describe("OrdenDetalle", () => {
 
       expect(await screen.findByRole("alert")).toHaveTextContent("No se pueden cargar más de 20 componentes.");
     });
+  });
+
+  describe("presupuesto", () => {
+    const PERMISOS_PRESUPUESTO = ["reparaciones.ver", "presupuestos.gestionar"];
+    const vigente = {
+      id: "v2",
+      numero: 2,
+      items: [
+        { descripcion: "Cambio de módulo", tipo: "repuesto", monto: 15000 },
+        { descripcion: "Colocación", tipo: "mano_obra", monto: 2500.5 },
+      ],
+      total: 17500.5,
+      creadoPor: "Técnico 1",
+      creadoEn: "2026-11-08T12:00:00Z",
+    };
+    const anterior = {
+      id: "v1",
+      numero: 1,
+      items: [{ descripcion: "Cambio de módulo", tipo: "repuesto", monto: 12000 }],
+      total: 12000,
+      creadoPor: "Técnico 1",
+      creadoEn: "2026-11-07T12:00:00Z",
+    };
+    const ordenSinPresupuesto = { ...orden, estado: "esperando_presupuesto", estadosDisponibles: [], presupuestoVigente: null };
+
+    /** El POST de presupuestos responde `respuestaPost`; el GET de presupuestos devuelve las dos versiones. */
+    function stubPresupuesto(
+      respuestaPost: () => Response,
+      permisos: string[] = PERMISOS_PRESUPUESTO,
+      ordenInicial: unknown = ordenSinPresupuesto,
+    ) {
+      const fetchMock = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>((url, init) => {
+        if (url.includes("/api/v1/me")) return Promise.resolve(json(me(permisos)));
+        if (init?.method === "POST" && url.endsWith("/presupuestos")) return Promise.resolve(respuestaPost());
+        if (url.endsWith("/presupuestos")) return Promise.resolve(json([vigente, anterior]));
+        if (url.includes("/historial")) return Promise.resolve(json({ items: [] }));
+        if (url.endsWith("/fotos")) return Promise.resolve(json([]));
+        return Promise.resolve(json(ordenInicial));
+      });
+      vi.stubGlobal("fetch", fetchMock);
+      return fetchMock;
+    }
+
+    it("sin el permiso no muestra el formulario para crear una versión", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      stubPresupuesto(() => json({}), ["reparaciones.ver"]);
+
+      render(<OrdenDetalle id="o1" />);
+
+      const seccion = within(await screen.findByRole("region", { name: "Presupuesto" }));
+      expect(seccion.queryByRole("group", { name: "Nueva versión del presupuesto" })).not.toBeInTheDocument();
+      expect(seccion.queryByRole("button", { name: "Guardar presupuesto" })).not.toBeInTheDocument();
+    });
+
+    it("sin presupuesto lo avisa y no ofrece ver versiones anteriores", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      stubPresupuesto(() => json({}));
+
+      render(<OrdenDetalle id="o1" />);
+
+      expect(await screen.findByText("Todavía no se presupuestó esta orden.")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Ver versiones anteriores" })).not.toBeInTheDocument();
+    });
+
+    it("muestra los ítems y el total de la versión vigente, y a pedido las anteriores", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      const fetchMock = stubPresupuesto(() => json({}), ["reparaciones.ver"], { ...ordenSinPresupuesto, presupuestoVigente: vigente });
+
+      render(<OrdenDetalle id="o1" />);
+
+      const seccion = within(await screen.findByRole("region", { name: "Presupuesto" }));
+      expect(seccion.getByText("Versión 2")).toBeInTheDocument();
+      const items = within(seccion.getByRole("list", { name: "Ítems del presupuesto vigente" }))
+        .getAllByRole("listitem")
+        .map((li) => li.textContent);
+      expect(items).toEqual([
+        `Repuesto: Cambio de módulo — ${formatearMonto(15000)}`,
+        `Mano de obra: Colocación — ${formatearMonto(2500.5)}`,
+      ]);
+      expect(seccion.getByText(montoEnPantalla(17500.5), { selector: "strong" })).toBeInTheDocument();
+      expect(seccion.getByText(/Creado por Técnico 1 el/)).toBeInTheDocument();
+      // Las versiones anteriores no se piden al cargar la pantalla.
+      const pidioVersiones = () => fetchMock.mock.calls.some(([url, init]) => init?.method === "GET" && url.endsWith("/reparaciones/o1/presupuestos"));
+      expect(pidioVersiones()).toBe(false);
+
+      fireEvent.click(seccion.getByRole("button", { name: "Ver versiones anteriores" }));
+
+      const lista = within(await seccion.findByRole("list", { name: "Versiones anteriores del presupuesto" }));
+      expect(lista.getAllByRole("listitem")).toHaveLength(1);
+      expect(lista.getByText(/Versión 1/)).toBeInTheDocument();
+      expect(lista.getByText(montoEnPantalla(12000))).toBeInTheDocument();
+      expect(pidioVersiones()).toBe(true);
+    });
+
+    it("con el permiso arma los ítems, muestra el total en vivo y guarda la versión", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      const actualizada = { ...ordenSinPresupuesto, estado: "presupuesto_enviado", presupuestoVigente: { ...vigente, numero: 1, id: "v1" } };
+      const fetchMock = stubPresupuesto(() => json(actualizada));
+
+      render(<OrdenDetalle id="o1" />);
+
+      const form = within(await screen.findByRole("group", { name: "Nueva versión del presupuesto" }));
+      expect(form.getByRole("button", { name: "Guardar presupuesto" })).toBeDisabled();
+
+      const item1 = within(form.getByRole("group", { name: "Ítem 1" }));
+      fireEvent.change(item1.getByRole("combobox", { name: "Tipo" }), { target: { value: "repuesto" } });
+      fireEvent.change(item1.getByRole("textbox", { name: "Descripción" }), { target: { value: "Cambio de módulo" } });
+      fireEvent.change(item1.getByRole("spinbutton", { name: "Monto" }), { target: { value: "15000" } });
+
+      fireEvent.click(form.getByRole("button", { name: "Agregar ítem" }));
+      const item2 = within(form.getByRole("group", { name: "Ítem 2" }));
+      fireEvent.change(item2.getByRole("textbox", { name: "Descripción" }), { target: { value: "Colocación" } });
+      fireEvent.change(item2.getByRole("spinbutton", { name: "Monto" }), { target: { value: "2500.50" } });
+
+      expect(form.getByText(montoEnPantalla(17500.5), { selector: "strong" })).toBeInTheDocument();
+      fireEvent.click(form.getByRole("button", { name: "Guardar presupuesto" }));
+
+      expect(await screen.findByText("Presupuesto enviado", { selector: ".estado-chip" })).toBeInTheDocument();
+      const post = fetchMock.mock.calls.find(([url, init]) => init?.method === "POST" && url.endsWith("/reparaciones/o1/presupuestos"));
+      expect(post).toBeDefined();
+      expect(JSON.parse(String(post![1]!.body))).toEqual({
+        items: [
+          { tipo: "repuesto", descripcion: "Cambio de módulo", monto: 15000 },
+          { tipo: "mano_obra", descripcion: "Colocación", monto: 2500.5 },
+        ],
+      });
+      expect(screen.getByText("Versión 1")).toBeInTheDocument();
+      // El formulario vuelve a una sola fila vacía.
+      expect(form.queryByRole("group", { name: "Ítem 2" })).not.toBeInTheDocument();
+      expect(within(form.getByRole("group", { name: "Ítem 1" })).getByRole("textbox", { name: "Descripción" })).toHaveValue("");
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+
+    it("muestra tal cual el error de validación del backend", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      stubPresupuesto(() =>
+        json({ title: "La descripción de un ítem no puede superar los 200 caracteres.", codigo: "presupuesto_invalido", status: 400 }, 400),
+      );
+
+      render(<OrdenDetalle id="o1" />);
+
+      const item1 = within(await screen.findByRole("group", { name: "Ítem 1" }));
+      fireEvent.change(item1.getByRole("textbox", { name: "Descripción" }), { target: { value: "Cambio de módulo" } });
+      fireEvent.change(item1.getByRole("spinbutton", { name: "Monto" }), { target: { value: "100" } });
+      fireEvent.click(screen.getByRole("button", { name: "Guardar presupuesto" }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent("La descripción de un ítem no puede superar los 200 caracteres.");
+      expect(item1.getByRole("textbox", { name: "Descripción" })).toHaveValue("Cambio de módulo");
+    });
+
+    it("muestra un mensaje de permiso si el rol no puede presupuestar", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      stubPresupuesto(() => json({ title: "Forbidden", status: 403 }, 403));
+
+      render(<OrdenDetalle id="o1" />);
+
+      const item1 = within(await screen.findByRole("group", { name: "Ítem 1" }));
+      fireEvent.change(item1.getByRole("textbox", { name: "Descripción" }), { target: { value: "Cambio de módulo" } });
+      fireEvent.change(item1.getByRole("spinbutton", { name: "Monto" }), { target: { value: "100" } });
+      fireEvent.click(screen.getByRole("button", { name: "Guardar presupuesto" }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent("Tu rol no permite crear presupuestos de la orden.");
+      expect(screen.getByRole("heading", { name: "Orden 25" })).toBeInTheDocument();
+    });
+  });
+
+  it("muestra en el historial la creación de una versión del presupuesto", async () => {
+    mocks.getIdToken.mockResolvedValue("t");
+    stubCambioDeEstado(() => json({}), { ...orden, estadosDisponibles: [] }, [
+      {
+        id: "r1",
+        accion: "presupuesto_creado",
+        usuario: "Técnico 1",
+        fecha: "2026-11-08T12:00:00Z",
+        cambios: [
+          { campo: "version_presupuesto", anterior: "1", nuevo: "2" },
+          { campo: "total_presupuesto", anterior: "12000.00", nuevo: "17500.50" },
+        ],
+      },
+    ]);
+
+    render(<OrdenDetalle id="o1" />);
+
+    const historial = within(await screen.findByRole("region", { name: "Historial de la orden" }));
+    expect(
+      historial.getByText(
+        (_, el) => el?.tagName === "SPAN" && el.textContent === `Creó la versión 2 del presupuesto por ${formatearMonto(17500.5)}`,
+      ),
+    ).toBeInTheDocument();
   });
 
   it("muestra en el historial los cambios de estado con el nombre de cada estado", async () => {

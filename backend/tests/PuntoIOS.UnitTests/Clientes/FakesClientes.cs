@@ -135,6 +135,32 @@ internal sealed class OrdenRepoEnMemoria : PuntoIOS.Application.Features.Reparac
     public Task<PuntoIOS.Domain.Reparaciones.FotoOrden?> ObtenerFotoAsync(Guid ordenId, Guid fotoId, CancellationToken ct) =>
         Task.FromResult(Fotos.FirstOrDefault(f => f.OrdenId == ordenId && f.Id == fotoId));
 
+    public List<PuntoIOS.Domain.Reparaciones.VersionDePresupuesto> VersionesPresupuesto { get; } = [];
+
+    public void AgregarVersionPresupuesto(PuntoIOS.Domain.Reparaciones.VersionDePresupuesto version) =>
+        VersionesPresupuesto.Add(version);
+
+    public Task<IReadOnlyList<PuntoIOS.Domain.Reparaciones.VersionDePresupuesto>> ListarVersionesPresupuestoAsync(
+        Guid ordenId, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<PuntoIOS.Domain.Reparaciones.VersionDePresupuesto>>(
+            VersionesPresupuesto.Where(v => v.OrdenId == ordenId).OrderByDescending(v => v.Numero).ToList());
+
+    public Task<PuntoIOS.Domain.Reparaciones.VersionDePresupuesto?> ObtenerVersionVigentePresupuestoAsync(
+        Guid ordenId, CancellationToken ct) =>
+        Task.FromResult(VersionesPresupuesto.Where(v => v.OrdenId == ordenId).OrderByDescending(v => v.Numero).FirstOrDefault());
+
+    public Task<IReadOnlyList<PuntoIOS.Domain.Reparaciones.VersionDePresupuesto>> ObtenerVersionesVigentesPresupuestoAsync(
+        IEnumerable<Guid> ordenIds, CancellationToken ct)
+    {
+        var ids = ordenIds.ToHashSet();
+        return Task.FromResult<IReadOnlyList<PuntoIOS.Domain.Reparaciones.VersionDePresupuesto>>(
+            VersionesPresupuesto
+                .Where(v => ids.Contains(v.OrdenId))
+                .GroupBy(v => v.OrdenId)
+                .Select(g => g.OrderByDescending(v => v.Numero).First())
+                .ToList());
+    }
+
     public Task GuardarCambiosAsync(CancellationToken ct)
     {
         Guardados++;

@@ -124,7 +124,7 @@ public sealed class RecibirEquipoHandler(
         // Orden, equipo nuevo y auditoría comparten la unidad de trabajo: se guardan juntos o nada.
         await ordenes.GuardarCambiosAsync(ct);
 
-        var armador = new ArmadorDeOrdenes(clientes, dispositivos, directorio);
+        var armador = new ArmadorDeOrdenes(ordenes, clientes, dispositivos, directorio);
         return Resultado<OrdenReparacionDto>.Ok((await armador.CompletasAsync([orden], ct))[0]);
     }
 

@@ -39,6 +39,9 @@ public static class AccionesAuditadas
 
     /// <summary>Se registró la respuesta (aprobado o rechazado) a la versión vigente del presupuesto.</summary>
     public const string PresupuestoRespondido = "presupuesto_respondido";
+
+    /// <summary>Se registró la entrega del equipo: garantía elegida, monto cobrado y método de pago.</summary>
+    public const string EntregaRegistrada = "entrega_registrada";
 }
 
 /// <summary>

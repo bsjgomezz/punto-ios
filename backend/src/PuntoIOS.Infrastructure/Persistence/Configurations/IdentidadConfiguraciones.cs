@@ -50,12 +50,13 @@ internal sealed class RolPermisoConfiguration : IEntityTypeConfiguration<RolPerm
         builder.HasOne<Permiso>().WithMany().HasForeignKey(rp => rp.PermisoCodigo).OnDelete(DeleteBehavior.Restrict);
 
         // Permisos iniciales por rol (editables luego). El Administrador tiene todo el catálogo.
+        // Entregar el equipo registra el cobro: es de Recepción/Ventas (SDD), no del técnico.
         var recepcion = new[]
         {
             Permisos.ClientesVer, Permisos.ClientesCrear, Permisos.ClientesEditar, Permisos.ClientesSeguimiento,
             Permisos.DispositivosVer, Permisos.DispositivosCrear, Permisos.DispositivosEditar, Permisos.DispositivosVerImei,
             Permisos.ReparacionesVer, Permisos.ReparacionesCrear, Permisos.ReparacionesCambiarEstado,
-            Permisos.PresupuestosGestionar,
+            Permisos.PresupuestosGestionar, Permisos.ReparacionesEntregar,
         };
 
         // El técnico ve el IMEI completo para chequear bloqueos (iCloud, denuncias); cada consulta queda registrada.

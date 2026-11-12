@@ -46,6 +46,11 @@ public class CambiarEstadoEndpointTests(PostgresFixture postgres) : IClassFixtur
     private static Task<HttpResponseMessage> ResponderPresupuestoAsync(HttpClient cliente, Guid ordenId, bool aprobado) =>
         cliente.PostAsJsonAsync($"{Ruta}/{ordenId}/presupuestos/respuesta", new ResponderPresupuestoRequest(aprobado));
 
+    /// <summary>A "entregado" solo se llega con el endpoint de entrega (registra cobro y garantía), no con el cambio genérico.</summary>
+    private static Task<HttpResponseMessage> EntregarAsync(
+        HttpClient cliente, Guid ordenId, string garantiaCodigo = "sin_garantia", decimal montoCobrado = 0m, string metodoPago = "efectivo") =>
+        cliente.PostAsJsonAsync($"{Ruta}/{ordenId}/entrega", new EntregarOrdenRequest(garantiaCodigo, montoCobrado, metodoPago));
+
     /// <summary>
     /// Lleva la orden por el flujo real hasta "esperando_aprobacion": cambio genérico hasta esperando presupuesto →
     /// se crea la versión 1 (queda en presupuesto enviado) → cambio genérico a esperando aprobación.
@@ -72,7 +77,8 @@ public class CambiarEstadoEndpointTests(PostgresFixture postgres) : IClassFixtur
         Assert.Equal(["en_pruebas", "cancelado"], orden.EstadosDisponibles);
 
         // Cada paso es un cambio de estado. Casi todos van por el cambio genérico; crear el presupuesto pasa a
-        // "presupuesto_enviado" y rechazarlo (respuesta del presupuesto) pasa a "presupuesto_rechazado".
+        // "presupuesto_enviado", rechazarlo (respuesta del presupuesto) pasa a "presupuesto_rechazado" y la entrega
+        // (endpoint de entrega) pasa a "entregado".
         (string Estado, Func<Task<HttpResponseMessage>> Paso)[] cadena =
         [
             ("en_pruebas", () => CambiarAsync(admin, orden.Id, "en_pruebas")),
@@ -81,7 +87,7 @@ public class CambiarEstadoEndpointTests(PostgresFixture postgres) : IClassFixtur
             ("presupuesto_enviado", () => PresupuestarAsync(admin, orden.Id)),
             ("esperando_aprobacion", () => CambiarAsync(admin, orden.Id, "esperando_aprobacion")),
             ("presupuesto_rechazado", () => ResponderPresupuestoAsync(admin, orden.Id, aprobado: false)),
-            ("entregado", () => CambiarAsync(admin, orden.Id, "entregado")),
+            ("entregado", () => EntregarAsync(admin, orden.Id)),
         ];
         foreach (var (estado, paso) in cadena)
         {
@@ -95,12 +101,15 @@ public class CambiarEstadoEndpointTests(PostgresFixture postgres) : IClassFixtur
         Assert.Empty(final.EstadosDisponibles);
 
         var historial = await admin.GetFromJsonAsync<PagedResult<RegistroHistorialDto>>($"{Ruta}/{orden.Id}/historial");
-        // Los siete pasos dejan su "estado_cambiado": crear y responder el presupuesto también registran el cambio de estado.
+        // Los siete pasos dejan su "estado_cambiado": crear y responder el presupuesto y entregar también registran el
+        // cambio de estado.
         Assert.Equal(cadena.Length, historial!.Items.Count(h => h.Accion == AccionesAuditadas.EstadoCambiado));
         Assert.Single(historial.Items, h => h.Accion == AccionesAuditadas.PresupuestoCreado);
         Assert.Single(historial.Items, h => h.Accion == AccionesAuditadas.PresupuestoRespondido);
-        var ultimo = historial.Items[0];
-        Assert.Equal(AccionesAuditadas.EstadoCambiado, ultimo.Accion);
+        Assert.Single(historial.Items, h => h.Accion == AccionesAuditadas.EntregaRegistrada);
+
+        // La entrega deja dos registros con la misma fecha (entrega y estado): se busca el último cambio de estado.
+        var ultimo = historial.Items.First(h => h.Accion == AccionesAuditadas.EstadoCambiado);
         Assert.Equal(new CambioDeCampo("estado", "presupuesto_rechazado", "entregado"), Assert.Single(ultimo.Cambios));
     }
 
@@ -117,8 +126,9 @@ public class CambiarEstadoEndpointTests(PostgresFixture postgres) : IClassFixtur
         var vacio = await CambiarAsync(admin, orden.Id, null);
         var ordenInexistente = await CambiarAsync(admin, Guid.NewGuid(), "en_pruebas");
 
+        // A "entregado" nunca se llega con el cambio genérico: el chequeo de "usar_entrega" va antes que la tabla.
         Assert.Equal(HttpStatusCode.Conflict, directoAEntregado.StatusCode);
-        Assert.Equal("transicion_invalida", await CodigoAsync(directoAEntregado));
+        Assert.Equal("usar_entrega", await CodigoAsync(directoAEntregado));
         Assert.Equal(HttpStatusCode.Conflict, mismoEstado.StatusCode);
         Assert.Equal("transicion_invalida", await CodigoAsync(mismoEstado));
         Assert.Equal(HttpStatusCode.BadRequest, inexistente.StatusCode);
@@ -179,7 +189,7 @@ public class CambiarEstadoEndpointTests(PostgresFixture postgres) : IClassFixtur
             Assert.NotNull(antes.DesbloqueoCifrado);
         }
 
-        var entregada = await CambiarAsync(admin, orden.Id, "entregado");
+        var entregada = await EntregarAsync(admin, orden.Id);
         Assert.Equal(HttpStatusCode.OK, entregada.StatusCode);
         Assert.Null((await entregada.Content.ReadFromJsonAsync<OrdenReparacionDto>())!.DesbloqueoTipo);
 

@@ -161,13 +161,25 @@ public class ReparacionesEndpointTests(PostgresFixture postgres) : IClassFixture
             }
         }
 
-        string[] hastaEntregado = ["en_pruebas", "en_diagnostico", "irreparable", "entregado"];
+        // A "entregado" solo se llega con el endpoint de entrega (registra cobro y garantía), no con el cambio genérico.
+        async Task EntregarAsync(Guid ordenId)
+        {
+            var respuesta = await admin.PostAsJsonAsync(
+                $"{Ruta}/{ordenId}/entrega", new EntregarOrdenRequest("sin_garantia", 0m, "efectivo"));
+            Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+        }
+
+        string[] hastaIrreparable = ["en_pruebas", "en_diagnostico", "irreparable"];
 
         await CrearAsync(t1);
-        await LlevarAsync(await CrearAsync(t1), hastaEntregado);
+        var entregada1 = await CrearAsync(t1);
+        await LlevarAsync(entregada1, hastaIrreparable);
+        await EntregarAsync(entregada1);
         await LlevarAsync(await CrearAsync(t1), "cancelado");
         await LlevarAsync(await CrearAsync(t2), "en_pruebas");
-        await LlevarAsync(await CrearAsync(t2), hastaEntregado);
+        var entregada2 = await CrearAsync(t2);
+        await LlevarAsync(entregada2, hastaIrreparable);
+        await EntregarAsync(entregada2);
         return (t1, t2);
     }
 

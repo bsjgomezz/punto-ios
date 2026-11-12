@@ -9,6 +9,7 @@ using PuntoIOS.Application.Features.Reparaciones.ActualizarDatosTecnicos;
 using PuntoIOS.Application.Features.Reparaciones.CambiarEstado;
 using PuntoIOS.Application.Features.Reparaciones.ConsultarOrdenes;
 using PuntoIOS.Application.Features.Reparaciones.CrearVersionPresupuesto;
+using PuntoIOS.Application.Features.Reparaciones.EntregarOrden;
 using PuntoIOS.Application.Features.Reparaciones.Fotos;
 using PuntoIOS.Application.Features.Reparaciones.ListarVersionesPresupuesto;
 using PuntoIOS.Application.Features.Reparaciones.Puertos;
@@ -59,6 +60,9 @@ public sealed record CrearVersionPresupuestoRequest(List<ItemPresupuestoRequest>
 /// <summary>Respuesta a la versión vigente del presupuesto: true = aprobado, false = rechazado.</summary>
 public sealed record ResponderPresupuestoRequest(bool Aprobado);
 
+/// <summary>Entrega del equipo: código de garantía, monto cobrado y método de pago.</summary>
+public sealed record EntregarOrdenRequest(string? GarantiaCodigo, decimal MontoCobrado, string? MetodoPago);
+
 [ApiController]
 [Route("api/v1/reparaciones")]
 public sealed class ReparacionesController(
@@ -75,7 +79,8 @@ public sealed class ReparacionesController(
     ActualizarDatosTecnicosHandler actualizarDatosTecnicos,
     CrearVersionPresupuestoHandler crearPresupuesto,
     ListarVersionesPresupuestoHandler listarPresupuestos,
-    ResponderPresupuestoHandler responderPresupuesto) : ControllerBase
+    ResponderPresupuestoHandler responderPresupuesto,
+    EntregarOrdenHandler entregarOrden) : ControllerBase
 {
     /// <summary>
     /// Órdenes de la más nueva a la más vieja. Con <c>clienteId</c>, solo las de ese cliente; con <c>tecnicoId</c>,
@@ -208,6 +213,19 @@ public sealed class ReparacionesController(
         Guid id, ResponderPresupuestoRequest request, CancellationToken ct)
     {
         var resultado = await responderPresupuesto.HandleAsync(new ResponderPresupuestoCommand(id, request.Aprobado), ct);
+        return resultado.EsExitoso ? Ok(resultado.Valor) : resultado.Error!.ToProblem();
+    }
+
+    /// <summary>
+    /// Entrega el equipo: registra la garantía elegida y el cobro, y mueve el estado a "entregado". Solo desde
+    /// "listo para retirar", "presupuesto rechazado" o "irreparable".
+    /// </summary>
+    [HttpPost("{id:guid}/entrega")]
+    [Authorize(Policy = Permisos.ReparacionesEntregar)]
+    public async Task<ActionResult<OrdenReparacionDto>> Entregar(Guid id, EntregarOrdenRequest request, CancellationToken ct)
+    {
+        var resultado = await entregarOrden.HandleAsync(
+            new EntregarOrdenCommand(id, request.GarantiaCodigo, request.MontoCobrado, request.MetodoPago), ct);
         return resultado.EsExitoso ? Ok(resultado.Valor) : resultado.Error!.ToProblem();
     }
 

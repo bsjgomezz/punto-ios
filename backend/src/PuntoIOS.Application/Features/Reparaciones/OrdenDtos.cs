@@ -11,10 +11,12 @@ namespace PuntoIOS.Application.Features.Reparaciones;
 /// <summary>
 /// Orden completa para el personal. El desbloqueo nunca viaja acá: solo si existe y de qué tipo es.
 /// <c>EstadosDisponibles</c>: estados a los que se puede pasar desde el actual con el cambio de estado genérico
-/// (no incluye "aprobado" ni "presupuesto_rechazado", que solo se alcanzan respondiendo el presupuesto).
+/// (no incluye "aprobado" ni "presupuesto_rechazado", que solo se alcanzan respondiendo el presupuesto, ni
+/// "entregado", que solo se alcanza con el endpoint de entrega).
 /// Es la vista interna del taller: incluye <c>NotasInternas</c>, que son privadas. Un futuro DTO público para el
 /// cliente (portal de seguimiento, S18) NO debe reutilizar este record ni copiar <c>NotasInternas</c>.
 /// <c>PresupuestoVigente</c>: la versión de presupuesto de número más alto, o null si todavía no se presupuestó.
+/// Garantía y cobro (<c>GarantiaCodigo</c> a <c>EntregadoEn</c>): se graban al entregar; null hasta entonces.
 /// </summary>
 public sealed record OrdenReparacionDto(
     Guid Id,
@@ -39,6 +41,12 @@ public sealed record OrdenReparacionDto(
     IReadOnlyList<string> ComponentesAfectados,
     string? TrabajoRealizado,
     string? NotasInternas,
+    string? GarantiaCodigo,
+    int? GarantiaDias,
+    DateOnly? GarantiaVenceEn,
+    decimal? MontoCobrado,
+    string? MetodoPago,
+    DateTimeOffset? EntregadoEn,
     VersionDePresupuestoDto? PresupuestoVigente);
 
 /// <summary>Checklist de ingreso. <c>Items</c>: código → resultado (solo los revisados).</summary>
@@ -125,9 +133,10 @@ internal sealed class ArmadorDeOrdenes(
                 new ChecklistDto(o.ChecklistItems.ToDictionary(i => i.Codigo, i => i.Valor), o.SaludBateria, o.NotasChecklist),
                 o.NoEnciende,
                 // Sin "aprobado" ni "presupuesto_rechazado": a esos estados solo se llega respondiendo el presupuesto
-                // (POST .../presupuestos/respuesta), y el cambio de estado genérico los rechaza.
+                // (POST .../presupuestos/respuesta). Sin "entregado": solo se llega entregando (POST .../entrega).
+                // El cambio de estado genérico rechaza los tres.
                 MaquinaDeEstados.SiguientesEstados(o.Estado)
-                    .Where(e => e is not (EstadosDeReparacion.Aprobado or EstadosDeReparacion.PresupuestoRechazado))
+                    .Where(e => e is not (EstadosDeReparacion.Aprobado or EstadosDeReparacion.PresupuestoRechazado or EstadosDeReparacion.Entregado))
                     .ToList(),
                 o.Pruebas,
                 o.Diagnostico,
@@ -135,6 +144,12 @@ internal sealed class ArmadorDeOrdenes(
                 o.ComponentesAfectados,
                 o.TrabajoRealizado,
                 o.NotasInternas, // Solo para el personal: no pasar NotasInternas a un DTO público (S18).
+                o.GarantiaCodigo,
+                o.GarantiaDias,
+                o.GarantiaVenceEn,
+                o.MontoCobrado,
+                o.MetodoPago,
+                o.EntregadoEn,
                 vigentes.TryGetValue(o.Id, out var vigente) ? VersionDePresupuestoDto.Desde(vigente, nombres) : null))
             .ToList();
     }

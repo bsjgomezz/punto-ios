@@ -51,6 +51,33 @@ export const TIPOS_DE_ITEM_PRESUPUESTO: { codigo: string; nombre: string }[] = [
 export const nombreDeTipoItemPresupuesto = (codigo: string) =>
   TIPOS_DE_ITEM_PRESUPUESTO.find((t) => t.codigo === codigo)?.nombre ?? codigo;
 
+/** Mismo catálogo que el backend (OpcionesDeGarantia). */
+export const OPCIONES_DE_GARANTIA: { codigo: string; nombre: string }[] = [
+  { codigo: "sin_garantia", nombre: "Sin garantía" },
+  { codigo: "15_dias", nombre: "15 días" },
+  { codigo: "30_dias", nombre: "30 días" },
+  { codigo: "45_dias", nombre: "45 días" },
+  { codigo: "60_dias", nombre: "60 días" },
+];
+
+export const nombreDeGarantia = (codigo: string) => OPCIONES_DE_GARANTIA.find((g) => g.codigo === codigo)?.nombre ?? codigo;
+
+/** Mismo catálogo que el backend (MetodosDePago). */
+export const METODOS_DE_PAGO: { codigo: string; nombre: string }[] = [
+  { codigo: "efectivo", nombre: "Efectivo" },
+  { codigo: "transferencia_bancaria", nombre: "Transferencia bancaria" },
+  { codigo: "tarjeta_debito", nombre: "Tarjeta de débito" },
+  { codigo: "tarjeta_credito", nombre: "Tarjeta de crédito" },
+];
+
+export const nombreDeMetodoDePago = (codigo: string) => METODOS_DE_PAGO.find((m) => m.codigo === codigo)?.nombre ?? codigo;
+
+/**
+ * Estados desde los que se puede entregar el equipo: espeja a MaquinaDeEstados del backend (las únicas
+ * transiciones a "entregado"). La entrega se hace con su propio endpoint, no con el cambio de estado genérico.
+ */
+export const ESTADOS_ENTREGABLES: string[] = ["listo_para_retirar", "presupuesto_rechazado", "irreparable"];
+
 export type ItemPresupuesto = { descripcion: string; tipo: string; monto: number };
 
 /** Una versión del presupuesto. Nunca se edita: para cambiarlo se crea una versión nueva. */
@@ -103,6 +130,18 @@ export type Orden = {
   trabajoRealizado: string | null;
   /** Privadas del taller: no las ve el cliente. */
   notasInternas: string | null;
+  /** Código de la garantía elegida al entregar (null hasta que se entrega). */
+  garantiaCodigo: string | null;
+  /** Días de garantía (null hasta que se entrega o si fue sin garantía). */
+  garantiaDias: number | null;
+  /** Fecha "YYYY-MM-DD" en que vence la garantía (null si no hay garantía o todavía no se entregó). */
+  garantiaVenceEn: string | null;
+  /** Lo que se cobró al entregar (puede ser 0). */
+  montoCobrado: number | null;
+  /** Código del método de pago del cobro. */
+  metodoPago: string | null;
+  /** Fecha y hora (ISO) de la entrega; null mientras no se entregó. */
+  entregadoEn: string | null;
   /** La versión de presupuesto de número más alto, o null si todavía no se presupuestó. */
   presupuestoVigente: VersionDePresupuesto | null;
 };
@@ -191,6 +230,15 @@ export function listarVersionesPresupuesto(token: string, ordenId: string, signa
 /** Aprueba o rechaza la versión vigente del presupuesto; la orden puede cambiar de estado. */
 export function responderPresupuesto(token: string, ordenId: string, aprobado: boolean): Promise<Orden> {
   return apiPost<Orden>(`/api/v1/reparaciones/${encodeURIComponent(ordenId)}/presupuestos/respuesta`, token, { aprobado });
+}
+
+/** Entrega el equipo: registra garantía y cobro, y pasa la orden a "entregado" (solo desde ESTADOS_ENTREGABLES). */
+export function entregarOrden(
+  token: string,
+  ordenId: string,
+  datos: { garantiaCodigo: string; montoCobrado: number; metodoPago: string },
+): Promise<Orden> {
+  return apiPost<Orden>(`/api/v1/reparaciones/${encodeURIComponent(ordenId)}/entrega`, token, datos);
 }
 
 /** Igual formato que usa el backend para mostrar montos en pesos argentinos. */

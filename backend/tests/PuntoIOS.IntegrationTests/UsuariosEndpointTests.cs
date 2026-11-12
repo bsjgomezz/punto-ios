@@ -31,7 +31,8 @@ public class UsuariosEndpointTests(PostgresFixture postgres) : IClassFixture<Pos
             [
                 Permisos.ClientesCrear, Permisos.ClientesEditar, Permisos.ClientesSeguimiento, Permisos.ClientesVer,
                 Permisos.DispositivosCrear, Permisos.DispositivosEditar, Permisos.DispositivosVer, Permisos.DispositivosVerImei,
-                Permisos.PresupuestosGestionar, Permisos.ReparacionesCambiarEstado, Permisos.ReparacionesCrear, Permisos.ReparacionesVer,
+                Permisos.PresupuestosGestionar, Permisos.ReparacionesCambiarEstado, Permisos.ReparacionesCrear,
+                Permisos.ReparacionesEntregar, Permisos.ReparacionesVer,
             ],
             roles.Single(r => r.Id == RolesDeSistema.RecepcionVentasId).Permisos);
     }

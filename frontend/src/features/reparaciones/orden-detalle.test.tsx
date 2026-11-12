@@ -13,7 +13,7 @@ vi.mock("@/features/auth/auth-provider", () => ({
   useAuth: () => ({ user: mocks.user, signOut: vi.fn() }),
 }));
 
-import { formatearMonto } from "./api";
+import { formatearFecha, formatearMonto } from "./api";
 import { OrdenDetalle } from "./orden-detalle";
 
 const orden = {
@@ -77,9 +77,10 @@ function stubCambioDeEstado(
   respuestaPost: () => Response,
   ordenInicial: unknown = { ...orden, estadosDisponibles: ["en_pruebas", "en_diagnostico", "cancelado"] },
   historial: unknown[] = [],
+  permisos: string[] = PERMISOS_ESTADO,
 ) {
   const fetchMock = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>((url, init) => {
-    if (url.includes("/api/v1/me")) return Promise.resolve(json(me(PERMISOS_ESTADO)));
+    if (url.includes("/api/v1/me")) return Promise.resolve(json(me(permisos)));
     if (init?.method === "POST" && url.endsWith("/estado")) return Promise.resolve(respuestaPost());
     if (url.includes("/historial")) return Promise.resolve(json({ items: historial }));
     if (url.endsWith("/fotos")) return Promise.resolve(json([]));
@@ -711,6 +712,291 @@ describe("OrdenDetalle", () => {
         expect(seccion.queryByRole("button", { name: "Aprobar" })).not.toBeInTheDocument();
         expect(seccion.queryByRole("button", { name: "Rechazar" })).not.toBeInTheDocument();
       });
+    });
+  });
+
+  describe("entrega", () => {
+    const PERMISOS_ENTREGA = ["reparaciones.ver", "reparaciones.entregar"];
+    const aprobado = {
+      id: "v1",
+      numero: 1,
+      items: [{ descripcion: "Cambio de módulo", tipo: "repuesto", monto: 17500.5 }],
+      total: 17500.5,
+      creadoPor: "Técnico 1",
+      creadoEn: "2026-11-08T12:00:00Z",
+      respuestaAprobada: true,
+      respondidoEn: "2026-11-09T12:00:00Z",
+      respondidoPor: "Recepción 1",
+    };
+    const sinEntregar = {
+      garantiaCodigo: null,
+      garantiaDias: null,
+      garantiaVenceEn: null,
+      montoCobrado: null,
+      metodoPago: null,
+      entregadoEn: null,
+    };
+    const ordenLista = { ...orden, ...sinEntregar, estado: "listo_para_retirar", estadosDisponibles: [], presupuestoVigente: aprobado };
+    const ordenEntregada = {
+      ...ordenLista,
+      estado: "entregado",
+      garantiaCodigo: "30_dias",
+      garantiaDias: 30,
+      garantiaVenceEn: "2026-12-10",
+      montoCobrado: 17500.5,
+      metodoPago: "transferencia_bancaria",
+      entregadoEn: "2026-11-10T15:00:00Z",
+    };
+
+    /** El POST de entrega responde `respuestaPost`. */
+    function stubEntrega(
+      respuestaPost: () => Response,
+      permisos: string[] = PERMISOS_ENTREGA,
+      ordenInicial: unknown = ordenLista,
+      historial: unknown[] = [],
+    ) {
+      const fetchMock = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>((url, init) => {
+        if (url.includes("/api/v1/me")) return Promise.resolve(json(me(permisos)));
+        if (init?.method === "POST" && url.endsWith("/entrega")) return Promise.resolve(respuestaPost());
+        if (url.includes("/historial")) return Promise.resolve(json({ items: historial }));
+        if (url.endsWith("/fotos")) return Promise.resolve(json([]));
+        return Promise.resolve(json(ordenInicial));
+      });
+      vi.stubGlobal("fetch", fetchMock);
+      return fetchMock;
+    }
+
+    const postDeEntrega = (fetchMock: ReturnType<typeof stubEntrega>) =>
+      fetchMock.mock.calls.find(([url, init]) => init?.method === "POST" && url.endsWith("/reparaciones/o1/entrega"));
+
+    it("sin el permiso no muestra el formulario aunque la orden esté lista para retirar", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      stubEntrega(() => json({}), ["reparaciones.ver"]);
+
+      render(<OrdenDetalle id="o1" />);
+
+      await screen.findByRole("heading", { name: "Orden 25" });
+      expect(screen.queryByRole("region", { name: "Entrega" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Entregar equipo" })).not.toBeInTheDocument();
+    });
+
+    it("con el permiso pero en un estado no entregable no muestra el formulario", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      stubEntrega(() => json({}), PERMISOS_ENTREGA, { ...ordenLista, estado: "en_reparacion" });
+
+      render(<OrdenDetalle id="o1" />);
+
+      await screen.findByRole("heading", { name: "Orden 25" });
+      expect(screen.queryByRole("region", { name: "Entrega" })).not.toBeInTheDocument();
+    });
+
+    it("con presupuesto aprobado prellena el monto y no habilita el botón hasta elegir garantía y método", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      stubEntrega(() => json({}));
+
+      render(<OrdenDetalle id="o1" />);
+
+      const seccion = within(await screen.findByRole("region", { name: "Entrega" }));
+      expect(seccion.getByLabelText("Monto cobrado")).toHaveValue(17500.5);
+      expect(seccion.getByLabelText("Garantía")).toHaveValue("");
+      expect(seccion.getByLabelText("Método de pago")).toHaveValue("");
+      const boton = seccion.getByRole("button", { name: "Entregar equipo" });
+      expect(boton).toBeDisabled();
+
+      fireEvent.change(seccion.getByLabelText("Garantía"), { target: { value: "30_dias" } });
+      expect(boton).toBeDisabled();
+      fireEvent.change(seccion.getByLabelText("Método de pago"), { target: { value: "efectivo" } });
+      expect(boton).toBeEnabled();
+
+      fireEvent.change(seccion.getByLabelText("Monto cobrado"), { target: { value: "" } });
+      expect(boton).toBeDisabled();
+    });
+
+    it("envía la entrega y muestra la orden entregada con el resumen", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      const fetchMock = stubEntrega(() => json(ordenEntregada));
+
+      render(<OrdenDetalle id="o1" />);
+
+      const seccion = within(await screen.findByRole("region", { name: "Entrega" }));
+      fireEvent.change(seccion.getByLabelText("Garantía"), { target: { value: "30_dias" } });
+      fireEvent.change(seccion.getByLabelText("Método de pago"), { target: { value: "transferencia_bancaria" } });
+      fireEvent.click(seccion.getByRole("button", { name: "Entregar equipo" }));
+
+      expect(await screen.findByText("Entregado", { selector: ".estado-chip" })).toBeInTheDocument();
+      const post = postDeEntrega(fetchMock);
+      expect(post).toBeDefined();
+      expect(JSON.parse(String(post![1]!.body))).toEqual({
+        garantiaCodigo: "30_dias",
+        montoCobrado: 17500.5,
+        metodoPago: "transferencia_bancaria",
+      });
+      const resumen = within(screen.getByRole("region", { name: "Entrega" }));
+      expect(resumen.queryByRole("button", { name: "Entregar equipo" })).not.toBeInTheDocument();
+      expect(resumen.getByText("30 días")).toBeInTheDocument();
+      expect(resumen.getByText(`· vence el ${formatearFecha("2026-12-10")}`)).toBeInTheDocument();
+      expect(resumen.getByText(montoEnPantalla(17500.5))).toBeInTheDocument();
+      expect(resumen.getByText("Transferencia bancaria")).toBeInTheDocument();
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+
+    it("acepta un monto de 0 (irreparable, sin presupuesto)", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      const fetchMock = stubEntrega(() => json({ ...ordenEntregada, montoCobrado: 0 }), PERMISOS_ENTREGA, {
+        ...ordenLista,
+        estado: "irreparable",
+        presupuestoVigente: null,
+      });
+
+      render(<OrdenDetalle id="o1" />);
+
+      const seccion = within(await screen.findByRole("region", { name: "Entrega" }));
+      expect(seccion.getByLabelText("Monto cobrado")).toHaveValue(null);
+      fireEvent.change(seccion.getByLabelText("Garantía"), { target: { value: "sin_garantia" } });
+      fireEvent.change(seccion.getByLabelText("Método de pago"), { target: { value: "efectivo" } });
+      const boton = seccion.getByRole("button", { name: "Entregar equipo" });
+      expect(boton).toBeDisabled();
+
+      fireEvent.change(seccion.getByLabelText("Monto cobrado"), { target: { value: "0" } });
+      expect(boton).toBeEnabled();
+      fireEvent.click(boton);
+
+      expect(await screen.findByText("Entregado", { selector: ".estado-chip" })).toBeInTheDocument();
+      expect(JSON.parse(String(postDeEntrega(fetchMock)![1]!.body))).toEqual({
+        garantiaCodigo: "sin_garantia",
+        montoCobrado: 0,
+        metodoPago: "efectivo",
+      });
+    });
+
+    it("muestra un mensaje de permiso si el rol no puede entregar", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      stubEntrega(() => json({ title: "Forbidden", status: 403 }, 403));
+
+      render(<OrdenDetalle id="o1" />);
+
+      const seccion = within(await screen.findByRole("region", { name: "Entrega" }));
+      fireEvent.change(seccion.getByLabelText("Garantía"), { target: { value: "15_dias" } });
+      fireEvent.change(seccion.getByLabelText("Método de pago"), { target: { value: "efectivo" } });
+      fireEvent.click(seccion.getByRole("button", { name: "Entregar equipo" }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent("Tu rol no permite entregar equipos ni registrar cobros.");
+      expect(screen.getByText("Listo para retirar", { selector: ".estado-chip" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Entregar equipo" })).toBeEnabled();
+    });
+
+    it.each([
+      { status: 409, codigo: "fuera_de_estado_entregable", title: 'No se puede entregar una orden en estado "en_reparacion".' },
+      { status: 400, codigo: "entrega_invalida", title: "El monto cobrado no puede tener más de dos decimales." },
+    ])("muestra tal cual el error $status que informa el backend", async (caso) => {
+      mocks.getIdToken.mockResolvedValue("t");
+      stubEntrega(() => json({ title: caso.title, codigo: caso.codigo, status: caso.status }, caso.status));
+
+      render(<OrdenDetalle id="o1" />);
+
+      const seccion = within(await screen.findByRole("region", { name: "Entrega" }));
+      fireEvent.change(seccion.getByLabelText("Garantía"), { target: { value: "15_dias" } });
+      fireEvent.change(seccion.getByLabelText("Método de pago"), { target: { value: "efectivo" } });
+      fireEvent.click(seccion.getByRole("button", { name: "Entregar equipo" }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(caso.title);
+      expect(screen.getByRole("heading", { name: "Orden 25" })).toBeInTheDocument();
+    });
+
+    it("una orden ya entregada muestra el resumen aunque el rol no pueda entregar", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      stubEntrega(() => json({}), ["reparaciones.ver"], ordenEntregada);
+
+      render(<OrdenDetalle id="o1" />);
+
+      const seccion = within(await screen.findByRole("region", { name: "Entrega" }));
+      expect(seccion.getByText("30 días")).toBeInTheDocument();
+      expect(seccion.getByText(`· vence el ${formatearFecha("2026-12-10")}`)).toBeInTheDocument();
+      expect(seccion.getByText(montoEnPantalla(17500.5))).toBeInTheDocument();
+      expect(seccion.getByText("Transferencia bancaria")).toBeInTheDocument();
+      expect(seccion.queryByRole("button", { name: "Entregar equipo" })).not.toBeInTheDocument();
+      expect(seccion.queryByLabelText("Garantía")).not.toBeInTheDocument();
+    });
+
+    it("una orden entregada sin garantía no muestra vencimiento", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      stubEntrega(() => json({}), ["reparaciones.ver"], {
+        ...ordenEntregada,
+        garantiaCodigo: "sin_garantia",
+        garantiaDias: null,
+        garantiaVenceEn: null,
+        montoCobrado: 0,
+        metodoPago: "efectivo",
+      });
+
+      render(<OrdenDetalle id="o1" />);
+
+      const seccion = within(await screen.findByRole("region", { name: "Entrega" }));
+      expect(seccion.getByText("Sin garantía")).toBeInTheDocument();
+      expect(seccion.queryByText(/vence el/)).not.toBeInTheDocument();
+      expect(seccion.getByText(montoEnPantalla(0))).toBeInTheDocument();
+      expect(seccion.getByText("Efectivo")).toBeInTheDocument();
+    });
+
+    it("lista para retirar sin otros estados disponibles, la sección Estado remite a la entrega en vez de decir que es un estado final", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      stubCambioDeEstado(() => json({}), { ...ordenLista, estadosDisponibles: [] }, [], [...PERMISOS_ESTADO, "reparaciones.entregar"]);
+
+      render(<OrdenDetalle id="o1" />);
+
+      const seccion = within(await screen.findByRole("region", { name: "Estado de la orden" }));
+      expect(seccion.getByText('Para entregar el equipo, usá la sección "Entrega" más abajo.')).toBeInTheDocument();
+      expect(seccion.queryByText(/es un estado final/)).not.toBeInTheDocument();
+      expect(seccion.queryByRole("combobox", { name: "Pasar a" })).not.toBeInTheDocument();
+    });
+
+    it("sin el permiso de entregar, la sección Estado no remite a una sección que no existe", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      stubCambioDeEstado(() => json({}), { ...ordenLista, estadosDisponibles: [] });
+
+      render(<OrdenDetalle id="o1" />);
+
+      const seccion = within(await screen.findByRole("region", { name: "Estado de la orden" }));
+      expect(seccion.queryByText(/usá la sección "Entrega"/)).not.toBeInTheDocument();
+      expect(seccion.queryByText(/es un estado final/)).not.toBeInTheDocument();
+      expect(seccion.getByText("No hay otros cambios de estado disponibles.")).toBeInTheDocument();
+    });
+
+    it("en un estado entregable con otros estados disponibles remite a la entrega y además ofrece el combo", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      stubCambioDeEstado(() => json({}), { ...ordenLista, estadosDisponibles: ["cancelado"] }, [], [...PERMISOS_ESTADO, "reparaciones.entregar"]);
+
+      render(<OrdenDetalle id="o1" />);
+
+      const seccion = within(await screen.findByRole("region", { name: "Estado de la orden" }));
+      expect(seccion.getByText('Para entregar el equipo, usá la sección "Entrega" más abajo.')).toBeInTheDocument();
+      const opciones = within(seccion.getByRole("combobox", { name: "Pasar a" }))
+        .getAllByRole("option")
+        .map((o) => (o as HTMLOptionElement).value);
+      expect(opciones).toEqual(["", "cancelado"]);
+    });
+
+    it("muestra en el historial el registro de la entrega con nombres legibles", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      stubEntrega(() => json({}), ["reparaciones.ver"], ordenEntregada, [
+        {
+          id: "r1",
+          accion: "entrega_registrada",
+          usuario: "Recepción 1",
+          fecha: "2026-11-10T15:00:00Z",
+          cambios: [
+            { campo: "garantia", anterior: null, nuevo: "30 días" },
+            { campo: "monto_cobrado", anterior: null, nuevo: "17500.50" },
+            { campo: "metodo_pago", anterior: null, nuevo: "Transferencia bancaria" },
+          ],
+        },
+      ]);
+
+      render(<OrdenDetalle id="o1" />);
+
+      const historial = within(await screen.findByRole("region", { name: "Historial de la orden" }));
+      const texto = `Registró la entrega: Garantía: 30 días · Monto cobrado: ${formatearMonto(17500.5)} · Método de pago: Transferencia bancaria`;
+      expect(historial.getByText((_, el) => el?.tagName === "SPAN" && el.textContent === texto)).toBeInTheDocument();
     });
   });
 

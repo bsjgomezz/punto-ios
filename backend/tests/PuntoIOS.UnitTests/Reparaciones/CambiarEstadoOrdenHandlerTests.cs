@@ -73,7 +73,6 @@ public class CambiarEstadoOrdenHandlerTests
     }
 
     [Theory]
-    [InlineData("entregado")]
     [InlineData("recibido")]
     public async Task Una_transicion_no_permitida_desde_el_estado_actual_se_rechaza(string estado)
     {
@@ -99,6 +98,56 @@ public class CambiarEstadoOrdenHandlerTests
         Assert.Equal(EstadosDeReparacion.EsperandoAprobacion, _orden.Estado);
         Assert.Empty(_auditoria.Registros);
         Assert.Equal(0, _ordenes.Guardados);
+    }
+
+    [Fact]
+    public async Task Entregar_no_se_hace_con_el_cambio_generico_aunque_la_tabla_no_lo_permita()
+    {
+        // Desde "recibido" la tabla ni siquiera lo permitiría, pero el chequeo de "usar_entrega" va primero.
+        Assert.False(MaquinaDeEstados.PuedeTransicionar(_orden.Estado, EstadosDeReparacion.Entregado));
+
+        var resultado = await Crear().HandleAsync(new CambiarEstadoOrdenCommand(_orden.Id, EstadosDeReparacion.Entregado), default);
+
+        Assert.Equal("usar_entrega", resultado.Error!.Codigo);
+        Assert.Equal(EstadosDeReparacion.Recibido, _orden.Estado);
+        Assert.Empty(_auditoria.Registros);
+        Assert.Equal(0, _ordenes.Guardados);
+    }
+
+    [Fact]
+    public async Task Entregar_no_se_hace_con_el_cambio_generico_aunque_la_tabla_lo_permita()
+    {
+        Llevar(
+            EstadosDeReparacion.EnPruebas, EstadosDeReparacion.EnDiagnostico, EstadosDeReparacion.EsperandoPresupuesto,
+            EstadosDeReparacion.PresupuestoEnviado, EstadosDeReparacion.EsperandoAprobacion, EstadosDeReparacion.Aprobado,
+            EstadosDeReparacion.EnReparacion, EstadosDeReparacion.ReparacionCompletada, EstadosDeReparacion.ListoParaRetirar);
+        Assert.True(MaquinaDeEstados.PuedeTransicionar(_orden.Estado, EstadosDeReparacion.Entregado));
+
+        var resultado = await Crear().HandleAsync(new CambiarEstadoOrdenCommand(_orden.Id, EstadosDeReparacion.Entregado), default);
+
+        Assert.Equal("usar_entrega", resultado.Error!.Codigo);
+        Assert.Equal(EstadosDeReparacion.ListoParaRetirar, _orden.Estado);
+        Assert.True(_orden.TieneDesbloqueo);
+        Assert.Empty(_auditoria.Registros);
+        Assert.Equal(0, _ordenes.Guardados);
+    }
+
+    [Fact]
+    public async Task Listo_para_retirar_no_ofrece_entregado_como_estado_disponible()
+    {
+        Llevar(
+            EstadosDeReparacion.EnPruebas, EstadosDeReparacion.EnDiagnostico, EstadosDeReparacion.EsperandoPresupuesto,
+            EstadosDeReparacion.PresupuestoEnviado, EstadosDeReparacion.EsperandoAprobacion, EstadosDeReparacion.Aprobado,
+            EstadosDeReparacion.EnReparacion);
+
+        var resultado = await Crear().HandleAsync(
+            new CambiarEstadoOrdenCommand(_orden.Id, EstadosDeReparacion.ReparacionCompletada), default);
+        Assert.True(resultado.EsExitoso);
+        resultado = await Crear().HandleAsync(new CambiarEstadoOrdenCommand(_orden.Id, EstadosDeReparacion.ListoParaRetirar), default);
+
+        // En la tabla "entregado" es el único destino, pero solo se llega con el endpoint de entrega.
+        Assert.True(resultado.EsExitoso);
+        Assert.Empty(resultado.Valor!.EstadosDisponibles);
     }
 
     [Fact]

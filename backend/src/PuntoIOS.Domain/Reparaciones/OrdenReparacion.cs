@@ -14,6 +14,9 @@ public sealed class OrdenReparacion
     public const int LargoMaximoComponenteAfectado = 60;
     public const int MaximoComponentesAfectados = 20;
 
+    /// <summary>Tope del monto cobrado al entregar: entra cómodo en numeric(12,2).</summary>
+    public const decimal MontoCobradoMaximo = 99_999_999.99m;
+
     private OrdenReparacion()
     {
     }
@@ -85,6 +88,24 @@ public sealed class OrdenReparacion
     /// ningún otro DTO de cara al cliente — si en el futuro agregás un DTO público para una orden, no incluyas este campo.
     /// </summary>
     public string? NotasInternas { get; private set; }
+
+    /// <summary>Código de garantía elegido al entregar (ver <see cref="OpcionesDeGarantia"/>). Null hasta entregar.</summary>
+    public string? GarantiaCodigo { get; private set; }
+
+    /// <summary>Duración de la garantía en días, grabada al entregar (snapshot). Null si no tiene garantía o no se entregó.</summary>
+    public int? GarantiaDias { get; private set; }
+
+    /// <summary>Fecha de vencimiento de la garantía, ya calculada al entregar (snapshot). Null si no tiene garantía o no se entregó.</summary>
+    public DateOnly? GarantiaVenceEn { get; private set; }
+
+    /// <summary>Monto cobrado al entregar. Null hasta entregar.</summary>
+    public decimal? MontoCobrado { get; private set; }
+
+    /// <summary>Método de pago del cobro al entregar (ver <see cref="MetodosDePago"/>). Null hasta entregar.</summary>
+    public string? MetodoPago { get; private set; }
+
+    /// <summary>Momento en que se registró la entrega (cobro y garantía). Null hasta entregar.</summary>
+    public DateTimeOffset? EntregadoEn { get; private set; }
 
     public bool TieneDesbloqueo => DesbloqueoCifrado is not null;
 
@@ -274,6 +295,37 @@ public sealed class OrdenReparacion
         }
 
         return cambios;
+    }
+
+    /// <summary>
+    /// Registra la garantía elegida y el cobro al entregar el equipo. Valida todo antes de tocar nada: si algo
+    /// no es válido no cambia ningún campo. No cambia el estado de la orden — eso lo hace quien llama, con
+    /// <see cref="CambiarEstado"/>.
+    /// </summary>
+    public void RegistrarEntrega(string? garantiaCodigo, decimal montoCobrado, string? metodoPago, DateTimeOffset ahora)
+    {
+        if (garantiaCodigo is null || !OpcionesDeGarantia.Catalogo.ContainsKey(garantiaCodigo))
+        {
+            throw new ArgumentException("La garantía elegida no existe.", nameof(garantiaCodigo));
+        }
+
+        if (metodoPago is null || !MetodosDePago.Catalogo.ContainsKey(metodoPago))
+        {
+            throw new ArgumentException("El método de pago no existe.", nameof(metodoPago));
+        }
+
+        if (montoCobrado < 0 || montoCobrado > MontoCobradoMaximo || decimal.Round(montoCobrado, 2) != montoCobrado)
+        {
+            throw new ArgumentException("El monto cobrado no es válido.", nameof(montoCobrado));
+        }
+
+        var dias = OpcionesDeGarantia.Duraciones[garantiaCodigo];
+        GarantiaCodigo = garantiaCodigo;
+        GarantiaDias = dias;
+        GarantiaVenceEn = dias.HasValue ? DateOnly.FromDateTime(ahora.UtcDateTime).AddDays(dias.Value) : null;
+        MontoCobrado = montoCobrado;
+        MetodoPago = metodoPago;
+        EntregadoEn = ahora;
     }
 
     /// <summary>Borra el código de desbloqueo. Se llama al entregar el equipo.</summary>

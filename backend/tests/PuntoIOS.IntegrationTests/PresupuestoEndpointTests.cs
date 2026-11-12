@@ -52,6 +52,13 @@ public class PresupuestoEndpointTests(PostgresFixture postgres) : IClassFixture<
         Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
     }
 
+    /// <summary>Entrega el equipo (sin garantía ni cobro): es la única forma de pasar a "entregado".</summary>
+    private static async Task EntregarAsync(HttpClient cliente, Guid ordenId)
+    {
+        var respuesta = await cliente.PostAsJsonAsync($"{Ruta}/{ordenId}/entrega", new EntregarOrdenRequest("sin_garantia", 0m, "efectivo"));
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+    }
+
     private static List<ItemPresupuestoRequest> ItemsValidos() =>
     [
         new("Pantalla OLED", "repuesto", 15000m),
@@ -193,7 +200,7 @@ public class PresupuestoEndpointTests(PostgresFixture postgres) : IClassFixture<
         Assert.Equal(HttpStatusCode.OK, (await PresupuestarAsync(admin, orden.Id, ItemsValidos())).StatusCode);
         await LlevarAsync(admin, orden.Id, "esperando_aprobacion");
         await ResponderPresupuestoAsync(admin, orden.Id, aprobado: false);
-        await LlevarAsync(admin, orden.Id, "entregado");
+        await EntregarAsync(admin, orden.Id);
 
         var entregada = await PresupuestarAsync(admin, orden.Id, ItemsValidos());
         Assert.Equal(HttpStatusCode.Conflict, entregada.StatusCode);

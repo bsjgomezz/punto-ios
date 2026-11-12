@@ -11,18 +11,24 @@ import { ApiError, apiGet } from "@/lib/api/client";
 import {
   AVISO_FECHA_ESTIMADA,
   CHECKLIST_CATALOGO,
+  ESTADOS_ENTREGABLES,
+  METODOS_DE_PAGO,
   NOMBRES_DESBLOQUEO,
+  OPCIONES_DE_GARANTIA,
   RAZON_SIN_FECHA,
   TIPOS_DE_ITEM_PRESUPUESTO,
   actualizarDatosTecnicos,
   cambiarEstadoDeOrden,
   crearVersionPresupuesto,
+  entregarOrden,
   formatearFecha,
   formatearMonto,
   listarFotos,
   listarVersionesPresupuesto,
   nombreDeTipoItemPresupuesto,
   nombreDeEstado,
+  nombreDeGarantia,
+  nombreDeMetodoDePago,
   nombreDeTipo,
   obtenerFotoUrl,
   obtenerOrden,
@@ -53,6 +59,7 @@ const ACCIONES: Record<string, string> = {
   editado: "Editó datos de la orden",
   presupuesto_creado: "Presupuesto creado",
   presupuesto_respondido: "Presupuesto respondido",
+  entrega_registrada: "Registró la entrega",
 };
 
 /** Nombre para mostrar de cada campo auditado de la orden (snake_case en el backend). */
@@ -65,6 +72,9 @@ const NOMBRES_DE_CAMPO: Record<string, string> = {
   notas_internas: "Notas internas",
   version_presupuesto: "Versión del presupuesto",
   total_presupuesto: "Total del presupuesto",
+  garantia: "Garantía",
+  monto_cobrado: "Monto cobrado",
+  metodo_pago: "Método de pago",
 };
 
 function historialDeOrden(token: string, id: string, signal?: AbortSignal) {
@@ -93,6 +103,41 @@ function mensajeDeErrorDeRespuesta(error: unknown): string {
   if (error instanceof ApiError && error.status === 403) return "Tu rol no permite aprobar o rechazar presupuestos.";
   if (error instanceof ApiError && error.problem?.title) return error.problem.title;
   return "No se pudo registrar la respuesta. Verificá la conexión e intentá de nuevo.";
+}
+
+function mensajeDeErrorDeEntrega(error: unknown): string {
+  if (error instanceof ApiError && error.status === 403) return "Tu rol no permite entregar equipos ni registrar cobros.";
+  if (error instanceof ApiError && error.problem?.title) return error.problem.title;
+  return "No se pudo registrar la entrega. Verificá la conexión e intentá de nuevo.";
+}
+
+/** El monto de la entrega va como string (tal cual el input): vale si es un número >= 0 (0 es válido). */
+function montoDeEntrega(texto: string): number | null {
+  if (texto.trim() === "") return null;
+  const monto = Number(texto);
+  return Number.isFinite(monto) && monto >= 0 ? monto : null;
+}
+
+/**
+ * Monto a prellenar al entregar: el total del presupuesto si el cliente lo aprobó; si no, vacío (hay que cargarlo a
+ * conciencia, por ejemplo el cargo de revisión de una orden irreparable o rechazada).
+ */
+const montoInicialDeEntrega = (orden: Orden) =>
+  orden.presupuestoVigente?.respuestaAprobada === true ? String(orden.presupuestoVigente.total) : "";
+
+/**
+ * Valor de un cambio del registro de entrega para mostrar. El backend guarda el nombre de la garantía y del método
+ * (no el código) y el monto como número con punto decimal; si llegara un código se traduce igual.
+ */
+function valorDeEntrega(campo: string, valor: string | null): string {
+  if (valor === null) return "—";
+  if (campo === "garantia") return nombreDeGarantia(valor);
+  if (campo === "metodo_pago") return nombreDeMetodoDePago(valor);
+  if (campo === "monto_cobrado") {
+    const monto = Number(valor);
+    return valor.trim() !== "" && Number.isFinite(monto) ? formatearMonto(monto) : valor;
+  }
+  return valor;
 }
 
 /** Una fila del editor de ítems del presupuesto: el monto va como string, tal cual está en el input. */
@@ -212,6 +257,19 @@ function TextoDeRegistro({ registro }: { registro: Registro }) {
       </span>
     );
   }
+  if (registro.accion === "entrega_registrada" && registro.cambios && registro.cambios.length > 0) {
+    return (
+      <span>
+        Registró la entrega:{" "}
+        {registro.cambios.map((c, i) => (
+          <span key={c.campo}>
+            {i > 0 && " · "}
+            {NOMBRES_DE_CAMPO[c.campo] ?? c.campo}: <strong>{valorDeEntrega(c.campo, c.nuevo)}</strong>
+          </span>
+        ))}
+      </span>
+    );
+  }
   if (registro.accion === "editado" && registro.cambios && registro.cambios.length > 0) {
     const campos = registro.cambios.map((c) => NOMBRES_DE_CAMPO[c.campo] ?? c.campo).join(", ");
     return (
@@ -230,6 +288,7 @@ export function OrdenDetalle({ id }: { id: string }) {
   const puedeCambiarEstado = me.kind === "listo" && me.me.permisos.includes("reparaciones.cambiar_estado");
   const puedeEditarDatosTecnicos = me.kind === "listo" && me.me.permisos.includes("reparaciones.reparar");
   const puedePresupuestar = me.kind === "listo" && me.me.permisos.includes("presupuestos.gestionar");
+  const puedeEntregar = me.kind === "listo" && me.me.permisos.includes("reparaciones.entregar");
 
   const [estado, setEstado] = useState<Estado | null>(null);
   const [recarga, setRecarga] = useState(0);
@@ -258,6 +317,12 @@ export function OrdenDetalle({ id }: { id: string }) {
   // Qué respuesta se está registrando (null si ninguna): sirve para deshabilitar los dos botones y rotular el que se apretó.
   const [respondiendo, setRespondiendo] = useState<"aprobar" | "rechazar" | null>(null);
   const [errorRespuesta, setErrorRespuesta] = useState<string | null>(null);
+  const [garantiaEntrega, setGarantiaEntrega] = useState("");
+  // null hasta que carga la orden: así una recarga (p. ej. al ver el desbloqueo) no pisa lo que ya se escribió.
+  const [montoEntregaCargado, setMontoEntrega] = useState<string | null>(null);
+  const [metodoPagoEntrega, setMetodoPagoEntrega] = useState("");
+  const [entregando, setEntregando] = useState(false);
+  const [errorEntrega, setErrorEntrega] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -275,6 +340,7 @@ export function OrdenDetalle({ id }: { id: string }) {
       .then(([orden, historial, listaFotos]) => {
         setEstado({ kind: "listo", orden, historial: historial.items });
         setDatosTecnicos(formDeOrden(orden));
+        setMontoEntrega((actual) => actual ?? montoInicialDeEntrega(orden));
         setFotos(listaFotos);
       })
       .catch((error: unknown) => {
@@ -421,6 +487,29 @@ export function OrdenDetalle({ id }: { id: string }) {
     }
   }
 
+  async function entregar() {
+    const montoCobrado = montoDeEntrega(montoEntregaCargado ?? "");
+    if (!user || !garantiaEntrega || !metodoPagoEntrega || montoCobrado === null) return;
+    setErrorEntrega(null);
+    setEntregando(true);
+    try {
+      const t = token ?? (await user.getIdToken());
+      const actualizada = await entregarOrden(t, id, {
+        garantiaCodigo: garantiaEntrega,
+        montoCobrado,
+        metodoPago: metodoPagoEntrega,
+      });
+      setEstado((actual) => (actual?.kind === "listo" ? { ...actual, orden: actualizada } : actual));
+      // La entrega y el cambio de estado quedan en el historial: se recarga solo eso, sin pisar la orden.
+      const historial = await historialDeOrden(t, id).catch(() => null);
+      if (historial) setEstado((actual) => (actual?.kind === "listo" ? { ...actual, historial: historial.items } : actual));
+    } catch (error) {
+      setErrorEntrega(mensajeDeErrorDeEntrega(error));
+    } finally {
+      setEntregando(false);
+    }
+  }
+
   async function alternarVersionesAnteriores() {
     if (mostrandoVersiones) {
       setMostrandoVersiones(false);
@@ -455,6 +544,12 @@ export function OrdenDetalle({ id }: { id: string }) {
   const presupuestoVigente = orden?.presupuestoVigente ?? null;
   const versionesAnteriores = versiones?.filter((v) => v.id !== presupuestoVigente?.id) ?? [];
   const totalPresupuestoNuevo = filasPresupuesto.reduce((suma, f) => suma + montoDeFila(f), 0);
+  const montoEntrega = montoEntregaCargado ?? "";
+  // `!= null`: una orden sin los campos de entrega (undefined) cuenta como no entregada.
+  const yaEntregada = orden?.entregadoEn != null;
+  const esEntregable = orden !== null && ESTADOS_ENTREGABLES.includes(orden.estado);
+  const puedeEnviarEntrega =
+    !entregando && garantiaEntrega !== "" && metodoPagoEntrega !== "" && montoDeEntrega(montoEntrega) !== null;
 
   return (
     <main className="shell shell-wide">
@@ -516,36 +611,48 @@ export function OrdenDetalle({ id }: { id: string }) {
               {orden.estado === "esperando_aprobacion" ? (
                 // El combo genérico no ofrece aprobado / presupuesto_rechazado: eso se hace respondiendo el presupuesto.
                 <p className="list-count">Para aprobar o rechazar, usá la sección &quot;Presupuesto&quot; más abajo.</p>
-              ) : orden.estadosDisponibles.length === 0 ? (
-                <p className="list-count">{nombreDeEstado(orden.estado)} es un estado final: la orden ya no cambia de estado.</p>
               ) : (
                 <>
-                  <div className="field">
-                    <label htmlFor="nuevo-estado">Pasar a</label>
-                    <select
-                      id="nuevo-estado"
-                      value={estadoElegido}
-                      disabled={cambiandoEstado}
-                      onChange={(e) => setEstadoElegido(e.target.value)}
-                    >
-                      <option value="">Elegí un estado</option>
-                      {orden.estadosDisponibles.map((codigo) => (
-                        <option key={codigo} value={codigo}>
-                          {nombreDeEstado(codigo)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-actions">
-                    <button
-                      type="button"
-                      className="btn"
-                      disabled={!estadoElegido || cambiandoEstado}
-                      onClick={() => void cambiarEstado()}
-                    >
-                      {cambiandoEstado ? "Cambiando…" : "Cambiar estado"}
-                    </button>
-                  </div>
+                  {esEntregable && puedeEntregar && (
+                    // "entregado" no viene en estadosDisponibles: se llega solo registrando la entrega (con su cobro y garantía).
+                    <p className="list-count">Para entregar el equipo, usá la sección &quot;Entrega&quot; más abajo.</p>
+                  )}
+                  {orden.estadosDisponibles.length === 0 ? (
+                    !esEntregable ? (
+                      <p className="list-count">{nombreDeEstado(orden.estado)} es un estado final: la orden ya no cambia de estado.</p>
+                    ) : (
+                      !puedeEntregar && <p className="list-count">No hay otros cambios de estado disponibles.</p>
+                    )
+                  ) : (
+                    <>
+                      <div className="field">
+                        <label htmlFor="nuevo-estado">Pasar a</label>
+                        <select
+                          id="nuevo-estado"
+                          value={estadoElegido}
+                          disabled={cambiandoEstado}
+                          onChange={(e) => setEstadoElegido(e.target.value)}
+                        >
+                          <option value="">Elegí un estado</option>
+                          {orden.estadosDisponibles.map((codigo) => (
+                            <option key={codigo} value={codigo}>
+                              {nombreDeEstado(codigo)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="form-actions">
+                        <button
+                          type="button"
+                          className="btn"
+                          disabled={!estadoElegido || cambiandoEstado}
+                          onClick={() => void cambiarEstado()}
+                        >
+                          {cambiandoEstado ? "Cambiando…" : "Cambiar estado"}
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </>
               )}
               {errorEstado && (
@@ -946,6 +1053,95 @@ export function OrdenDetalle({ id }: { id: string }) {
               </div>
             )}
           </section>
+
+          {(yaEntregada || (puedeEntregar && esEntregable)) && (
+            <section aria-label="Entrega" className="history">
+              <h2 className="client-form-title">Entrega</h2>
+              {yaEntregada ? (
+                <dl className="detail-list">
+                  <div>
+                    <dt>Entregado</dt>
+                    <dd>{formatoFechaHora.format(new Date(orden.entregadoEn!))}</dd>
+                  </div>
+                  <div>
+                    <dt>Monto cobrado</dt>
+                    <dd>{orden.montoCobrado != null ? formatearMonto(orden.montoCobrado) : "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>Método de pago</dt>
+                    <dd>{orden.metodoPago ? nombreDeMetodoDePago(orden.metodoPago) : "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>Garantía</dt>
+                    <dd>
+                      {orden.garantiaCodigo ? nombreDeGarantia(orden.garantiaCodigo) : "—"}
+                      {orden.garantiaVenceEn && (
+                        <span className="client-meta"> · vence el {formatearFecha(orden.garantiaVenceEn)}</span>
+                      )}
+                    </dd>
+                  </div>
+                </dl>
+              ) : (
+                <>
+                  <div className="field">
+                    <label htmlFor="entrega-garantia">Garantía</label>
+                    <select
+                      id="entrega-garantia"
+                      value={garantiaEntrega}
+                      disabled={entregando}
+                      onChange={(e) => setGarantiaEntrega(e.target.value)}
+                    >
+                      <option value="">Elegí la garantía</option>
+                      {OPCIONES_DE_GARANTIA.map((g) => (
+                        <option key={g.codigo} value={g.codigo}>
+                          {g.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label htmlFor="entrega-monto">Monto cobrado</label>
+                    <input
+                      id="entrega-monto"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      inputMode="decimal"
+                      value={montoEntrega}
+                      disabled={entregando}
+                      onChange={(e) => setMontoEntrega(e.target.value)}
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="entrega-metodo-pago">Método de pago</label>
+                    <select
+                      id="entrega-metodo-pago"
+                      value={metodoPagoEntrega}
+                      disabled={entregando}
+                      onChange={(e) => setMetodoPagoEntrega(e.target.value)}
+                    >
+                      <option value="">Elegí el método de pago</option>
+                      {METODOS_DE_PAGO.map((m) => (
+                        <option key={m.codigo} value={m.codigo}>
+                          {m.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-actions">
+                    <button type="button" className="btn" disabled={!puedeEnviarEntrega} onClick={() => void entregar()}>
+                      {entregando ? "Entregando…" : "Entregar equipo"}
+                    </button>
+                  </div>
+                  {errorEntrega && (
+                    <p className="form-error" role="alert">
+                      {errorEntrega}
+                    </p>
+                  )}
+                </>
+              )}
+            </section>
+          )}
 
           <section aria-label="Fotos del equipo" className="history">
             <h2 className="client-form-title">Fotos</h2>

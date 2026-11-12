@@ -22,6 +22,7 @@ public static class Permisos
     public const string ReparacionesReparar = "reparaciones.reparar";
     public const string ReparacionesVerDesbloqueo = "reparaciones.ver_desbloqueo";
     public const string ReparacionesCambiarEstado = "reparaciones.cambiar_estado";
+    public const string ReparacionesEntregar = "reparaciones.entregar";
     public const string PresupuestosGestionar = "presupuestos.gestionar";
 
     /// <summary>Todos los permisos con su descripción (se siembran en la base de datos).</summary>
@@ -43,6 +44,7 @@ public static class Permisos
         [ReparacionesReparar] = "Trabajar en reparaciones (se le pueden asignar órdenes)",
         [ReparacionesVerDesbloqueo] = "Ver el código o patrón de desbloqueo del equipo (queda registrado)",
         [ReparacionesCambiarEstado] = "Cambiar el estado de una orden de reparación (queda registrado)",
+        [ReparacionesEntregar] = "Entregar el equipo, registrar el cobro y la garantía (queda registrado)",
         [PresupuestosGestionar] = "Crear versiones del presupuesto y registrar su aprobación o rechazo (queda registrado)",
     };
 }

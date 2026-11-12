@@ -317,6 +317,11 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         },
                         new
                         {
+                            Codigo = "reparaciones.entregar",
+                            Descripcion = "Entregar el equipo, registrar el cobro y la garantía (queda registrado)"
+                        },
+                        new
+                        {
                             Codigo = "presupuestos.gestionar",
                             Descripcion = "Crear versiones del presupuesto y registrar su aprobación o rechazo (queda registrado)"
                         });
@@ -476,6 +481,11 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         new
                         {
                             RolId = new Guid("0195a000-0000-7000-8000-000000000001"),
+                            PermisoCodigo = "reparaciones.entregar"
+                        },
+                        new
+                        {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000001"),
                             PermisoCodigo = "presupuestos.gestionar"
                         },
                         new
@@ -537,6 +547,11 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         {
                             RolId = new Guid("0195a000-0000-7000-8000-000000000002"),
                             PermisoCodigo = "presupuestos.gestionar"
+                        },
+                        new
+                        {
+                            RolId = new Guid("0195a000-0000-7000-8000-000000000002"),
+                            PermisoCodigo = "reparaciones.entregar"
                         },
                         new
                         {
@@ -745,6 +760,10 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("dispositivo_id");
 
+                    b.Property<DateTimeOffset?>("EntregadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("entregado_en");
+
                     b.Property<string>("Estado")
                         .IsRequired()
                         .HasMaxLength(40)
@@ -755,6 +774,19 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         .HasColumnType("date")
                         .HasColumnName("fecha_estimada_entrega");
 
+                    b.Property<string>("GarantiaCodigo")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("garantia_codigo");
+
+                    b.Property<int?>("GarantiaDias")
+                        .HasColumnType("integer")
+                        .HasColumnName("garantia_dias");
+
+                    b.Property<DateOnly?>("GarantiaVenceEn")
+                        .HasColumnType("date")
+                        .HasColumnName("garantia_vence_en");
+
                     b.Property<Guid>("LocalId")
                         .HasColumnType("uuid")
                         .HasColumnName("local_id");
@@ -763,6 +795,16 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("mediciones");
+
+                    b.Property<string>("MetodoPago")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("metodo_pago");
+
+                    b.Property<decimal?>("MontoCobrado")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("monto_cobrado");
 
                     b.Property<string>("NotasChecklist")
                         .HasMaxLength(1000)

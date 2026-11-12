@@ -15,8 +15,9 @@ public sealed record CambiarEstadoOrdenCommand(Guid OrdenId, string? NuevoEstado
 
 /// <summary>
 /// Pasa la orden a otro estado si la transición está permitida y deja registrado el cambio (anterior y nuevo).
-/// Al entregar el equipo se borra el código de desbloqueo. A "aprobado" y "presupuesto_rechazado" no se pasa por acá:
-/// solo con <see cref="ResponderPresupuesto.ResponderPresupuestoHandler"/>.
+/// A "aprobado" y "presupuesto_rechazado" no se pasa por acá: solo con
+/// <see cref="ResponderPresupuesto.ResponderPresupuestoHandler"/>. A "entregado" tampoco: solo con
+/// <see cref="EntregarOrden.EntregarOrdenHandler"/>, que registra el cobro y la garantía (y borra el desbloqueo).
 /// </summary>
 public sealed class CambiarEstadoOrdenHandler(
     IOrdenReparacionRepositorio ordenes,
@@ -49,6 +50,16 @@ public sealed class CambiarEstadoOrdenHandler(
                 TipoError.Conflicto,
                 "usar_respuesta_presupuesto",
                 "Para aprobar o rechazar el presupuesto hay que usar el endpoint de respuesta del presupuesto, no el cambio de estado genérico.");
+        }
+
+        // Entregar el equipo también registra el cobro y la garantía: por eso solo se llega a "entregado" con
+        // POST /reparaciones/{id}/entrega, nunca con este cambio de estado genérico.
+        if (comando.NuevoEstado == EstadosDeReparacion.Entregado)
+        {
+            return Resultado<OrdenReparacionDto>.Falla(
+                TipoError.Conflicto,
+                "usar_entrega",
+                "Para entregar el equipo hay que usar el endpoint de entrega (registra cobro y garantía), no el cambio de estado genérico.");
         }
 
         if (orden.Estado == comando.NuevoEstado || !MaquinaDeEstados.PuedeTransicionar(orden.Estado, comando.NuevoEstado))

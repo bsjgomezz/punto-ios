@@ -61,6 +61,11 @@ export type VersionDePresupuesto = {
   total: number;
   creadoPor: string | null;
   creadoEn: string;
+  /** true = aprobada, false = rechazada, null = todavía sin respuesta. */
+  respuestaAprobada: boolean | null;
+  respondidoEn: string | null;
+  /** Nombre de quién del staff registró la respuesta. */
+  respondidoPor: string | null;
 };
 
 export type TipoDesbloqueo = "pin" | "contrasena" | "patron";
@@ -179,6 +184,11 @@ export function crearVersionPresupuesto(token: string, ordenId: string, items: I
 /** Todas las versiones de presupuesto de la orden, de la más nueva a la más vieja. */
 export function listarVersionesPresupuesto(token: string, ordenId: string, signal?: AbortSignal): Promise<VersionDePresupuesto[]> {
   return apiGet<VersionDePresupuesto[]>(`/api/v1/reparaciones/${encodeURIComponent(ordenId)}/presupuestos`, token, signal);
+}
+
+/** Aprueba o rechaza la versión vigente del presupuesto; la orden puede cambiar de estado. */
+export function responderPresupuesto(token: string, ordenId: string, aprobado: boolean): Promise<Orden> {
+  return apiPost<Orden>(`/api/v1/reparaciones/${encodeURIComponent(ordenId)}/presupuestos/respuesta`, token, { aprobado });
 }
 
 /** Igual formato que usa el backend para mostrar montos en pesos argentinos. */

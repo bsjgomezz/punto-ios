@@ -15,7 +15,8 @@ public sealed record CambiarEstadoOrdenCommand(Guid OrdenId, string? NuevoEstado
 
 /// <summary>
 /// Pasa la orden a otro estado si la transición está permitida y deja registrado el cambio (anterior y nuevo).
-/// Al entregar el equipo se borra el código de desbloqueo.
+/// Al entregar el equipo se borra el código de desbloqueo. A "aprobado" y "presupuesto_rechazado" no se pasa por acá:
+/// solo con <see cref="ResponderPresupuesto.ResponderPresupuestoHandler"/>.
 /// </summary>
 public sealed class CambiarEstadoOrdenHandler(
     IOrdenReparacionRepositorio ordenes,
@@ -38,6 +39,16 @@ public sealed class CambiarEstadoOrdenHandler(
         if (string.IsNullOrWhiteSpace(comando.NuevoEstado) || !EstadosDeReparacion.Catalogo.ContainsKey(comando.NuevoEstado))
         {
             return Resultado<OrdenReparacionDto>.Falla(TipoError.Validacion, "estado_invalido", "El estado no existe.");
+        }
+
+        // Aprobar o rechazar el presupuesto también registra la respuesta en la versión vigente: por eso solo se llega a
+        // esos dos estados con POST /reparaciones/{id}/presupuestos/respuesta, nunca con este cambio de estado genérico.
+        if (comando.NuevoEstado is EstadosDeReparacion.Aprobado or EstadosDeReparacion.PresupuestoRechazado)
+        {
+            return Resultado<OrdenReparacionDto>.Falla(
+                TipoError.Conflicto,
+                "usar_respuesta_presupuesto",
+                "Para aprobar o rechazar el presupuesto hay que usar el endpoint de respuesta del presupuesto, no el cambio de estado genérico.");
         }
 
         if (orden.Estado == comando.NuevoEstado || !MaquinaDeEstados.PuedeTransicionar(orden.Estado, comando.NuevoEstado))

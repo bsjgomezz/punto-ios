@@ -43,6 +43,6 @@ public static class Permisos
         [ReparacionesReparar] = "Trabajar en reparaciones (se le pueden asignar órdenes)",
         [ReparacionesVerDesbloqueo] = "Ver el código o patrón de desbloqueo del equipo (queda registrado)",
         [ReparacionesCambiarEstado] = "Cambiar el estado de una orden de reparación (queda registrado)",
-        [PresupuestosGestionar] = "Crear versiones del presupuesto de una orden de reparación (queda registrado)",
+        [PresupuestosGestionar] = "Crear versiones del presupuesto y registrar su aprobación o rechazo (queda registrado)",
     };
 }

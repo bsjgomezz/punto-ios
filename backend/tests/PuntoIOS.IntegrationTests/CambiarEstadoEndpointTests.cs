@@ -39,6 +39,30 @@ public class CambiarEstadoEndpointTests(PostgresFixture postgres) : IClassFixtur
     private static async Task<string?> CodigoAsync(HttpResponseMessage respuesta) =>
         (await respuesta.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("codigo").GetString();
 
+    private static Task<HttpResponseMessage> PresupuestarAsync(HttpClient cliente, Guid ordenId) =>
+        cliente.PostAsJsonAsync(
+            $"{Ruta}/{ordenId}/presupuestos", new CrearVersionPresupuestoRequest([new("Conector de carga", "repuesto", 8000m)]));
+
+    private static Task<HttpResponseMessage> ResponderPresupuestoAsync(HttpClient cliente, Guid ordenId, bool aprobado) =>
+        cliente.PostAsJsonAsync($"{Ruta}/{ordenId}/presupuestos/respuesta", new ResponderPresupuestoRequest(aprobado));
+
+    /// <summary>
+    /// Lleva la orden por el flujo real hasta "esperando_aprobacion": cambio genérico hasta esperando presupuesto →
+    /// se crea la versión 1 (queda en presupuesto enviado) → cambio genérico a esperando aprobación.
+    /// </summary>
+    private static async Task LlevarAEsperandoAprobacionAsync(HttpClient admin, Guid ordenId)
+    {
+        foreach (var estado in new[] { "en_pruebas", "en_diagnostico", "esperando_presupuesto" })
+        {
+            Assert.Equal(HttpStatusCode.OK, (await CambiarAsync(admin, ordenId, estado)).StatusCode);
+        }
+
+        var presupuesto = await PresupuestarAsync(admin, ordenId);
+        Assert.Equal(HttpStatusCode.OK, presupuesto.StatusCode);
+        Assert.Equal("presupuesto_enviado", (await presupuesto.Content.ReadFromJsonAsync<OrdenReparacionDto>())!.Estado);
+        Assert.Equal(HttpStatusCode.OK, (await CambiarAsync(admin, ordenId, "esperando_aprobacion")).StatusCode);
+    }
+
     [Fact]
     public async Task Recorre_una_cadena_valida_hasta_entregar_y_cada_paso_queda_en_el_historial()
     {
@@ -47,14 +71,21 @@ public class CambiarEstadoEndpointTests(PostgresFixture postgres) : IClassFixtur
         var orden = await OrdenAsync(admin);
         Assert.Equal(["en_pruebas", "cancelado"], orden.EstadosDisponibles);
 
-        string[] cadena =
+        // Cada paso es un cambio de estado. Casi todos van por el cambio genérico; crear el presupuesto pasa a
+        // "presupuesto_enviado" y rechazarlo (respuesta del presupuesto) pasa a "presupuesto_rechazado".
+        (string Estado, Func<Task<HttpResponseMessage>> Paso)[] cadena =
         [
-            "en_pruebas", "en_diagnostico", "esperando_presupuesto", "presupuesto_enviado",
-            "esperando_aprobacion", "presupuesto_rechazado", "entregado",
+            ("en_pruebas", () => CambiarAsync(admin, orden.Id, "en_pruebas")),
+            ("en_diagnostico", () => CambiarAsync(admin, orden.Id, "en_diagnostico")),
+            ("esperando_presupuesto", () => CambiarAsync(admin, orden.Id, "esperando_presupuesto")),
+            ("presupuesto_enviado", () => PresupuestarAsync(admin, orden.Id)),
+            ("esperando_aprobacion", () => CambiarAsync(admin, orden.Id, "esperando_aprobacion")),
+            ("presupuesto_rechazado", () => ResponderPresupuestoAsync(admin, orden.Id, aprobado: false)),
+            ("entregado", () => CambiarAsync(admin, orden.Id, "entregado")),
         ];
-        foreach (var estado in cadena)
+        foreach (var (estado, paso) in cadena)
         {
-            var respuesta = await CambiarAsync(admin, orden.Id, estado);
+            var respuesta = await paso();
             Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
             Assert.Equal(estado, (await respuesta.Content.ReadFromJsonAsync<OrdenReparacionDto>())!.Estado);
         }
@@ -64,7 +95,10 @@ public class CambiarEstadoEndpointTests(PostgresFixture postgres) : IClassFixtur
         Assert.Empty(final.EstadosDisponibles);
 
         var historial = await admin.GetFromJsonAsync<PagedResult<RegistroHistorialDto>>($"{Ruta}/{orden.Id}/historial");
+        // Los siete pasos dejan su "estado_cambiado": crear y responder el presupuesto también registran el cambio de estado.
         Assert.Equal(cadena.Length, historial!.Items.Count(h => h.Accion == AccionesAuditadas.EstadoCambiado));
+        Assert.Single(historial.Items, h => h.Accion == AccionesAuditadas.PresupuestoCreado);
+        Assert.Single(historial.Items, h => h.Accion == AccionesAuditadas.PresupuestoRespondido);
         var ultimo = historial.Items[0];
         Assert.Equal(AccionesAuditadas.EstadoCambiado, ultimo.Accion);
         Assert.Equal(new CambioDeCampo("estado", "presupuesto_rechazado", "entregado"), Assert.Single(ultimo.Cambios));
@@ -98,6 +132,36 @@ public class CambiarEstadoEndpointTests(PostgresFixture postgres) : IClassFixtur
     }
 
     [Fact]
+    public async Task Aprobar_o_rechazar_el_presupuesto_con_el_cambio_de_estado_generico_se_rechaza()
+    {
+        using var api = await TestApi.CrearAsync(postgres);
+        var admin = api.ClienteAdministrador();
+        var orden = await OrdenAsync(admin);
+        await LlevarAEsperandoAprobacionAsync(admin, orden.Id);
+
+        // Ni el detalle los ofrece: desde esperando aprobación no queda ningún estado para el cambio genérico.
+        var enEspera = (await admin.GetFromJsonAsync<OrdenReparacionDto>($"{Ruta}/{orden.Id}"))!;
+        Assert.Equal("esperando_aprobacion", enEspera.Estado);
+        Assert.Empty(enEspera.EstadosDisponibles);
+
+        foreach (var estado in new[] { "aprobado", "presupuesto_rechazado" })
+        {
+            var respuesta = await CambiarAsync(admin, orden.Id, estado);
+            Assert.Equal(HttpStatusCode.Conflict, respuesta.StatusCode);
+            Assert.Equal("usar_respuesta_presupuesto", await CodigoAsync(respuesta));
+        }
+
+        var sinCambios = (await admin.GetFromJsonAsync<OrdenReparacionDto>($"{Ruta}/{orden.Id}"))!;
+        Assert.Equal("esperando_aprobacion", sinCambios.Estado);
+        Assert.Null(sinCambios.PresupuestoVigente!.RespuestaAprobada);
+
+        // Por la respuesta del presupuesto sí se aprueba.
+        var aprobada = await ResponderPresupuestoAsync(admin, orden.Id, aprobado: true);
+        Assert.Equal(HttpStatusCode.OK, aprobada.StatusCode);
+        Assert.Equal("aprobado", (await aprobada.Content.ReadFromJsonAsync<OrdenReparacionDto>())!.Estado);
+    }
+
+    [Fact]
     public async Task Al_entregar_se_borra_el_desbloqueo_de_la_base()
     {
         using var api = await TestApi.CrearAsync(postgres);
@@ -105,14 +169,8 @@ public class CambiarEstadoEndpointTests(PostgresFixture postgres) : IClassFixtur
         var orden = await OrdenAsync(admin, desbloqueoTipo: "pin", desbloqueoValor: "246810");
         Assert.Equal("pin", orden.DesbloqueoTipo);
 
-        foreach (var estado in new[]
-        {
-            "en_pruebas", "en_diagnostico", "esperando_presupuesto", "presupuesto_enviado",
-            "esperando_aprobacion", "presupuesto_rechazado",
-        })
-        {
-            Assert.Equal(HttpStatusCode.OK, (await CambiarAsync(admin, orden.Id, estado)).StatusCode);
-        }
+        await LlevarAEsperandoAprobacionAsync(admin, orden.Id);
+        Assert.Equal(HttpStatusCode.OK, (await ResponderPresupuestoAsync(admin, orden.Id, aprobado: false)).StatusCode);
 
         await using (var scope = api.Servicios.CreateAsyncScope())
         {

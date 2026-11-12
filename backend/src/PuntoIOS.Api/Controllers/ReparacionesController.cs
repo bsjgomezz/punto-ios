@@ -13,6 +13,7 @@ using PuntoIOS.Application.Features.Reparaciones.Fotos;
 using PuntoIOS.Application.Features.Reparaciones.ListarVersionesPresupuesto;
 using PuntoIOS.Application.Features.Reparaciones.Puertos;
 using PuntoIOS.Application.Features.Reparaciones.RecibirEquipo;
+using PuntoIOS.Application.Features.Reparaciones.ResponderPresupuesto;
 using PuntoIOS.Application.Features.Reparaciones.VerDesbloqueo;
 using PuntoIOS.Domain.Identidad;
 using PuntoIOS.Domain.Reparaciones;
@@ -54,6 +55,9 @@ public sealed record ItemPresupuestoRequest(string? Descripcion, string? Tipo, d
 /// <summary>Versión nueva del presupuesto (de 1 a 30 ítems).</summary>
 public sealed record CrearVersionPresupuestoRequest(List<ItemPresupuestoRequest>? Items);
 
+/// <summary>Respuesta a la versión vigente del presupuesto: true = aprobado, false = rechazado.</summary>
+public sealed record ResponderPresupuestoRequest(bool Aprobado);
+
 [ApiController]
 [Route("api/v1/reparaciones")]
 public sealed class ReparacionesController(
@@ -69,7 +73,8 @@ public sealed class ReparacionesController(
     CambiarEstadoOrdenHandler cambiarEstado,
     ActualizarDatosTecnicosHandler actualizarDatosTecnicos,
     CrearVersionPresupuestoHandler crearPresupuesto,
-    ListarVersionesPresupuestoHandler listarPresupuestos) : ControllerBase
+    ListarVersionesPresupuestoHandler listarPresupuestos,
+    ResponderPresupuestoHandler responderPresupuesto) : ControllerBase
 {
     /// <summary>
     /// Órdenes de la más nueva a la más vieja. Con <c>clienteId</c>, solo las de ese cliente; con <c>tecnicoId</c>,
@@ -188,6 +193,19 @@ public sealed class ReparacionesController(
             new CrearVersionPresupuestoCommand(
                 id, request.Items?.Select(i => new ItemPresupuestoInput(i?.Descripcion, i?.Tipo, i?.Monto ?? 0)).ToList()),
             ct);
+        return resultado.EsExitoso ? Ok(resultado.Valor) : resultado.Error!.ToProblem();
+    }
+
+    /// <summary>
+    /// Aprueba o rechaza la versión vigente del presupuesto y mueve el estado de la orden en consecuencia (a aprobado o
+    /// presupuesto rechazado). Solo con la orden esperando aprobación, y una sola vez por versión.
+    /// </summary>
+    [HttpPost("{id:guid}/presupuestos/respuesta")]
+    [Authorize(Policy = Permisos.PresupuestosGestionar)]
+    public async Task<ActionResult<OrdenReparacionDto>> ResponderPresupuesto(
+        Guid id, ResponderPresupuestoRequest request, CancellationToken ct)
+    {
+        var resultado = await responderPresupuesto.HandleAsync(new ResponderPresupuestoCommand(id, request.Aprobado), ct);
         return resultado.EsExitoso ? Ok(resultado.Valor) : resultado.Error!.ToProblem();
     }
 

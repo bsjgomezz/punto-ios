@@ -364,6 +364,9 @@ describe("OrdenDetalle", () => {
       total: 17500.5,
       creadoPor: "Técnico 1",
       creadoEn: "2026-11-08T12:00:00Z",
+      respuestaAprobada: null,
+      respondidoEn: null,
+      respondidoPor: null,
     };
     const anterior = {
       id: "v1",
@@ -372,6 +375,9 @@ describe("OrdenDetalle", () => {
       total: 12000,
       creadoPor: "Técnico 1",
       creadoEn: "2026-11-07T12:00:00Z",
+      respuestaAprobada: null,
+      respondidoEn: null,
+      respondidoPor: null,
     };
     const ordenSinPresupuesto = { ...orden, estado: "esperando_presupuesto", estadosDisponibles: [], presupuestoVigente: null };
 
@@ -514,6 +520,180 @@ describe("OrdenDetalle", () => {
       expect(await screen.findByRole("alert")).toHaveTextContent("Tu rol no permite crear presupuestos de la orden.");
       expect(screen.getByRole("heading", { name: "Orden 25" })).toBeInTheDocument();
     });
+
+    describe("aprobación o rechazo", () => {
+      const ordenEsperando = { ...orden, estado: "esperando_aprobacion", estadosDisponibles: [], presupuestoVigente: vigente };
+
+      /** Orden esperando aprobación; el POST de respuesta responde `respuestaPost`. */
+      function stubRespuesta(
+        respuestaPost: () => Response,
+        permisos: string[] = PERMISOS_PRESUPUESTO,
+        ordenInicial: unknown = ordenEsperando,
+      ) {
+        const fetchMock = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>((url, init) => {
+          if (url.includes("/api/v1/me")) return Promise.resolve(json(me(permisos)));
+          if (init?.method === "POST" && url.endsWith("/presupuestos/respuesta")) return Promise.resolve(respuestaPost());
+          if (url.includes("/historial")) return Promise.resolve(json({ items: [] }));
+          if (url.endsWith("/fotos")) return Promise.resolve(json([]));
+          return Promise.resolve(json(ordenInicial));
+        });
+        vi.stubGlobal("fetch", fetchMock);
+        return fetchMock;
+      }
+
+      const postDeRespuesta = (fetchMock: ReturnType<typeof stubRespuesta>) =>
+        fetchMock.mock.calls.find(([url, init]) => init?.method === "POST" && url.endsWith("/reparaciones/o1/presupuestos/respuesta"));
+
+      it.each([
+        { boton: "Aprobar", aprobado: true, estadoNuevo: "aprobado", nombreEstado: "Aprobado", texto: /^Aprobado por Recepción 1 el/ },
+        {
+          boton: "Rechazar",
+          aprobado: false,
+          estadoNuevo: "presupuesto_rechazado",
+          nombreEstado: "Presupuesto rechazado",
+          texto: /^Rechazado por Recepción 1 el/,
+        },
+      ])("con el permiso, al tocar $boton manda la respuesta y muestra la orden que devuelve el backend", async (caso) => {
+        mocks.getIdToken.mockResolvedValue("t");
+        const actualizada = {
+          ...ordenEsperando,
+          estado: caso.estadoNuevo,
+          presupuestoVigente: {
+            ...vigente,
+            respuestaAprobada: caso.aprobado,
+            respondidoEn: "2026-11-09T15:00:00Z",
+            respondidoPor: "Recepción 1",
+          },
+        };
+        const fetchMock = stubRespuesta(() => json(actualizada));
+
+        render(<OrdenDetalle id="o1" />);
+
+        const seccion = within(await screen.findByRole("region", { name: "Presupuesto" }));
+        expect(seccion.getByRole("button", { name: "Aprobar" })).toBeEnabled();
+        expect(seccion.getByRole("button", { name: "Rechazar" })).toBeEnabled();
+
+        fireEvent.click(seccion.getByRole("button", { name: caso.boton }));
+
+        expect(await screen.findByText(caso.nombreEstado, { selector: ".estado-chip" })).toBeInTheDocument();
+        const post = postDeRespuesta(fetchMock);
+        expect(post).toBeDefined();
+        expect(JSON.parse(String(post![1]!.body))).toEqual({ aprobado: caso.aprobado });
+        expect(seccion.getByText(caso.texto)).toBeInTheDocument();
+        expect(seccion.queryByRole("button", { name: "Aprobar" })).not.toBeInTheDocument();
+        expect(seccion.queryByRole("button", { name: "Rechazar" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      });
+
+      it("sin el permiso no muestra los botones, aunque la orden esté esperando aprobación", async () => {
+        mocks.getIdToken.mockResolvedValue("t");
+        stubRespuesta(() => json({}), ["reparaciones.ver"]);
+
+        render(<OrdenDetalle id="o1" />);
+
+        const seccion = within(await screen.findByRole("region", { name: "Presupuesto" }));
+        expect(seccion.getByText("Versión 2")).toBeInTheDocument();
+        expect(seccion.queryByRole("button", { name: "Aprobar" })).not.toBeInTheDocument();
+        expect(seccion.queryByRole("button", { name: "Rechazar" })).not.toBeInTheDocument();
+      });
+
+      it("no muestra los botones si la orden no está esperando aprobación", async () => {
+        mocks.getIdToken.mockResolvedValue("t");
+        stubRespuesta(() => json({}), PERMISOS_PRESUPUESTO, { ...ordenEsperando, estado: "presupuesto_enviado" });
+
+        render(<OrdenDetalle id="o1" />);
+
+        const seccion = within(await screen.findByRole("region", { name: "Presupuesto" }));
+        expect(seccion.getByText("Versión 2")).toBeInTheDocument();
+        expect(seccion.queryByRole("button", { name: "Aprobar" })).not.toBeInTheDocument();
+      });
+
+      it("muestra un mensaje de permiso si el rol no puede responder", async () => {
+        mocks.getIdToken.mockResolvedValue("t");
+        stubRespuesta(() => json({ title: "Forbidden", status: 403 }, 403));
+
+        render(<OrdenDetalle id="o1" />);
+
+        fireEvent.click(await screen.findByRole("button", { name: "Aprobar" }));
+
+        expect(await screen.findByRole("alert")).toHaveTextContent("Tu rol no permite aprobar o rechazar presupuestos.");
+        expect(screen.getByText("Esperando aprobación", { selector: ".estado-chip" })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Aprobar" })).toBeEnabled();
+      });
+
+      it("muestra tal cual el conflicto que informa el backend", async () => {
+        mocks.getIdToken.mockResolvedValue("t");
+        stubRespuesta(() =>
+          json({ title: "Esta versión del presupuesto ya fue respondida.", codigo: "presupuesto_ya_respondido", status: 409 }, 409),
+        );
+
+        render(<OrdenDetalle id="o1" />);
+
+        fireEvent.click(await screen.findByRole("button", { name: "Rechazar" }));
+
+        expect(await screen.findByRole("alert")).toHaveTextContent("Esta versión del presupuesto ya fue respondida.");
+        expect(screen.getByRole("heading", { name: "Orden 25" })).toBeInTheDocument();
+      });
+
+      it.each([
+        { respuestaAprobada: true, texto: /^Aprobado por Recepción 1 el/ },
+        { respuestaAprobada: false, texto: /^Rechazado por Recepción 1 el/ },
+      ])("con la versión ya respondida ($respuestaAprobada) muestra quién y cuándo, sin botones", async (caso) => {
+        mocks.getIdToken.mockResolvedValue("t");
+        stubRespuesta(() => json({}), PERMISOS_PRESUPUESTO, {
+          ...ordenEsperando,
+          presupuestoVigente: {
+            ...vigente,
+            respuestaAprobada: caso.respuestaAprobada,
+            respondidoEn: "2026-11-09T15:00:00Z",
+            respondidoPor: "Recepción 1",
+          },
+        });
+
+        render(<OrdenDetalle id="o1" />);
+
+        const seccion = within(await screen.findByRole("region", { name: "Presupuesto" }));
+        expect(seccion.getByText(caso.texto)).toBeInTheDocument();
+        expect(seccion.queryByRole("button", { name: "Aprobar" })).not.toBeInTheDocument();
+        expect(seccion.queryByRole("button", { name: "Rechazar" })).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  it("esperando aprobación, la sección Estado remite al presupuesto en vez de decir que es un estado final", async () => {
+    mocks.getIdToken.mockResolvedValue("t");
+    stubCambioDeEstado(() => json({}), { ...orden, estado: "esperando_aprobacion", estadosDisponibles: [] });
+
+    render(<OrdenDetalle id="o1" />);
+
+    const seccion = within(await screen.findByRole("region", { name: "Estado de la orden" }));
+    expect(seccion.getByText('Para aprobar o rechazar, usá la sección "Presupuesto" más abajo.')).toBeInTheDocument();
+    expect(seccion.queryByText(/es un estado final/)).not.toBeInTheDocument();
+    expect(seccion.queryByRole("combobox", { name: "Pasar a" })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    { respuesta: "aprobado", texto: "Aprobó la versión 3 del presupuesto" },
+    { respuesta: "rechazado", texto: "Rechazó la versión 3 del presupuesto" },
+  ])("muestra en el historial la respuesta al presupuesto ($respuesta)", async (caso) => {
+    mocks.getIdToken.mockResolvedValue("t");
+    stubCambioDeEstado(() => json({}), { ...orden, estadosDisponibles: [] }, [
+      {
+        id: "r1",
+        accion: "presupuesto_respondido",
+        usuario: "Recepción 1",
+        fecha: "2026-11-09T15:00:00Z",
+        cambios: [
+          { campo: "version_presupuesto", anterior: null, nuevo: "3" },
+          { campo: "respuesta", anterior: null, nuevo: caso.respuesta },
+        ],
+      },
+    ]);
+
+    render(<OrdenDetalle id="o1" />);
+
+    const historial = within(await screen.findByRole("region", { name: "Historial de la orden" }));
+    expect(historial.getByText((_, el) => el?.tagName === "SPAN" && el.textContent === caso.texto)).toBeInTheDocument();
   });
 
   it("muestra en el historial la creación de una versión del presupuesto", async () => {

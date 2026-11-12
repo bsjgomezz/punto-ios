@@ -26,6 +26,7 @@ import {
   nombreDeTipo,
   obtenerFotoUrl,
   obtenerOrden,
+  responderPresupuesto,
   subirFoto,
   verDesbloqueo,
   type DatosTecnicos,
@@ -51,6 +52,7 @@ const ACCIONES: Record<string, string> = {
   estado_cambiado: "Cambió el estado",
   editado: "Editó datos de la orden",
   presupuesto_creado: "Presupuesto creado",
+  presupuesto_respondido: "Presupuesto respondido",
 };
 
 /** Nombre para mostrar de cada campo auditado de la orden (snake_case en el backend). */
@@ -84,6 +86,12 @@ function mensajeDeErrorDePresupuesto(error: unknown): string {
   if (error instanceof ApiError && error.status === 403) return "Tu rol no permite crear presupuestos de la orden.";
   if (error instanceof ApiError && error.problem?.title) return error.problem.title;
   return "No se pudo guardar el presupuesto. Verificá la conexión e intentá de nuevo.";
+}
+
+function mensajeDeErrorDeRespuesta(error: unknown): string {
+  if (error instanceof ApiError && error.status === 403) return "Tu rol no permite aprobar o rechazar presupuestos.";
+  if (error instanceof ApiError && error.problem?.title) return error.problem.title;
+  return "No se pudo registrar la respuesta. Verificá la conexión e intentá de nuevo.";
 }
 
 /** Una fila del editor de ítems del presupuesto: el monto va como string, tal cual está en el input. */
@@ -191,6 +199,15 @@ function TextoDeRegistro({ registro }: { registro: Registro }) {
       </span>
     );
   }
+  if (registro.accion === "presupuesto_respondido" && registro.cambios && registro.cambios.length > 0) {
+    const version = registro.cambios.find((c) => c.campo === "version_presupuesto")?.nuevo;
+    const respuesta = registro.cambios.find((c) => c.campo === "respuesta")?.nuevo;
+    return (
+      <span>
+        {respuesta === "aprobado" ? "Aprobó" : "Rechazó"} la versión <strong>{version ?? "?"}</strong> del presupuesto
+      </span>
+    );
+  }
   if (registro.accion === "editado" && registro.cambios && registro.cambios.length > 0) {
     const campos = registro.cambios.map((c) => NOMBRES_DE_CAMPO[c.campo] ?? c.campo).join(", ");
     return (
@@ -234,6 +251,9 @@ export function OrdenDetalle({ id }: { id: string }) {
   const [mostrandoVersiones, setMostrandoVersiones] = useState(false);
   const [cargandoVersiones, setCargandoVersiones] = useState(false);
   const [errorVersiones, setErrorVersiones] = useState<string | null>(null);
+  // Qué respuesta se está registrando (null si ninguna): sirve para deshabilitar los dos botones y rotular el que se apretó.
+  const [respondiendo, setRespondiendo] = useState<"aprobar" | "rechazar" | null>(null);
+  const [errorRespuesta, setErrorRespuesta] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -376,6 +396,27 @@ export function OrdenDetalle({ id }: { id: string }) {
     }
   }
 
+  async function responder(aprobado: boolean) {
+    if (!user) return;
+    setErrorRespuesta(null);
+    setRespondiendo(aprobado ? "aprobar" : "rechazar");
+    try {
+      const t = token ?? (await user.getIdToken());
+      const actualizada = await responderPresupuesto(t, id, aprobado);
+      setEstado((actual) => (actual?.kind === "listo" ? { ...actual, orden: actualizada } : actual));
+      // La lista de versiones anteriores quedó vieja (la vigente ahora tiene respuesta): se vuelve a pedir al desplegarla.
+      setVersiones(null);
+      setMostrandoVersiones(false);
+      // La respuesta (y el cambio de estado) quedan en el historial: se recarga solo eso, sin pisar la orden.
+      const historial = await historialDeOrden(t, id).catch(() => null);
+      if (historial) setEstado((actual) => (actual?.kind === "listo" ? { ...actual, historial: historial.items } : actual));
+    } catch (error) {
+      setErrorRespuesta(mensajeDeErrorDeRespuesta(error));
+    } finally {
+      setRespondiendo(null);
+    }
+  }
+
   async function alternarVersionesAnteriores() {
     if (mostrandoVersiones) {
       setMostrandoVersiones(false);
@@ -468,7 +509,10 @@ export function OrdenDetalle({ id }: { id: string }) {
           {puedeCambiarEstado && (
             <section aria-label="Estado de la orden" className="history">
               <h2 className="client-form-title">Estado</h2>
-              {orden.estadosDisponibles.length === 0 ? (
+              {orden.estado === "esperando_aprobacion" ? (
+                // El combo genérico no ofrece aprobado / presupuesto_rechazado: eso se hace respondiendo el presupuesto.
+                <p className="list-count">Para aprobar o rechazar, usá la sección &quot;Presupuesto&quot; más abajo.</p>
+              ) : orden.estadosDisponibles.length === 0 ? (
                 <p className="list-count">{nombreDeEstado(orden.estado)} es un estado final: la orden ya no cambia de estado.</p>
               ) : (
                 <>
@@ -739,6 +783,35 @@ export function OrdenDetalle({ id }: { id: string }) {
                   Creado{presupuestoVigente.creadoPor ? ` por ${presupuestoVigente.creadoPor}` : ""} el{" "}
                   {formatoFechaHora.format(new Date(presupuestoVigente.creadoEn))}
                 </p>
+                {presupuestoVigente.respuestaAprobada !== null && (
+                  <p className={presupuestoVigente.respuestaAprobada ? "client-meta" : "form-error"}>
+                    {presupuestoVigente.respuestaAprobada ? "Aprobado" : "Rechazado"}
+                    {presupuestoVigente.respondidoPor ? ` por ${presupuestoVigente.respondidoPor}` : ""}
+                    {presupuestoVigente.respondidoEn
+                      ? ` el ${formatoFechaHora.format(new Date(presupuestoVigente.respondidoEn))}`
+                      : ""}
+                  </p>
+                )}
+                {puedePresupuestar && orden.estado === "esperando_aprobacion" && presupuestoVigente.respuestaAprobada === null && (
+                  <div className="form-actions" role="group" aria-label="Respuesta del cliente">
+                    <button type="button" className="btn" disabled={respondiendo !== null} onClick={() => void responder(true)}>
+                      {respondiendo === "aprobar" ? "Aprobando…" : "Aprobar"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-quiet"
+                      disabled={respondiendo !== null}
+                      onClick={() => void responder(false)}
+                    >
+                      {respondiendo === "rechazar" ? "Rechazando…" : "Rechazar"}
+                    </button>
+                  </div>
+                )}
+                {errorRespuesta && (
+                  <p className="form-error" role="alert">
+                    {errorRespuesta}
+                  </p>
+                )}
                 <div className="form-actions">
                   <button
                     type="button"

@@ -29,6 +29,31 @@ public sealed class VersionDePresupuesto
 
     public DateTimeOffset CreadoEn { get; private set; }
 
+    /// <summary>Respuesta a esta versión: true = aprobada, false = rechazada, null = todavía sin respuesta.</summary>
+    public bool? RespuestaAprobada { get; private set; }
+
+    /// <summary>Cuándo se registró la respuesta (hora del servidor).</summary>
+    public DateTimeOffset? RespondidoEn { get; private set; }
+
+    /// <summary>Quién del staff registró la respuesta (no quién del cliente respondió: eso no se guarda).</summary>
+    public Guid? RespondidoPorUsuarioId { get; private set; }
+
+    /// <summary>
+    /// Registra la respuesta (aprobado o rechazado) con el timestamp de servidor. Una vez respondida, no se puede
+    /// volver a responder la misma versión.
+    /// </summary>
+    public void RegistrarRespuesta(bool aprobado, Guid? usuarioId, DateTimeOffset ahora)
+    {
+        if (RespuestaAprobada is not null)
+        {
+            throw new InvalidOperationException("Esta versión del presupuesto ya tiene una respuesta registrada.");
+        }
+
+        RespuestaAprobada = aprobado;
+        RespondidoEn = ahora;
+        RespondidoPorUsuarioId = usuarioId;
+    }
+
     /// <summary>
     /// Crea la versión número <paramref name="numero"/> con estos ítems. Valida la cantidad y cada ítem
     /// (descripción obligatoria y sin pasarse de largo, tipo del catálogo, monto mayor a cero con hasta 2 decimales).

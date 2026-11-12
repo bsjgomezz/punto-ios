@@ -90,6 +90,9 @@ internal sealed class VersionDePresupuestoConfiguration : IEntityTypeConfigurati
         builder.Property(v => v.Total).HasColumnName("total").HasPrecision(12, 2);
         builder.Property(v => v.CreadoPorUsuarioId).HasColumnName("creado_por_usuario_id");
         builder.Property(v => v.CreadoEn).HasColumnName("creado_en");
+        builder.Property(v => v.RespuestaAprobada).HasColumnName("respuesta_aprobada");
+        builder.Property(v => v.RespondidoEn).HasColumnName("respondido_en");
+        builder.Property(v => v.RespondidoPorUsuarioId).HasColumnName("respondido_por_usuario_id");
         builder.OwnsMany(v => v.Items, items => items.ToJson("items"));
 
         // Dos versiones de la misma orden nunca comparten número (también frena altas simultáneas).

@@ -4,7 +4,10 @@ using PuntoIOS.Application.Features.Reparaciones.Puertos;
 
 namespace PuntoIOS.Application.Features.Reparaciones.ListarVersionesPresupuesto;
 
-/// <summary>Todas las versiones de presupuesto de la orden, de la más nueva a la más vieja, con el nombre de quién las creó.</summary>
+/// <summary>
+/// Todas las versiones de presupuesto de la orden, de la más nueva a la más vieja, con el nombre de quién las creó y
+/// de quién registró la respuesta.
+/// </summary>
 public sealed class ListarVersionesPresupuestoHandler(IOrdenReparacionRepositorio ordenes, IDirectorioDeUsuarios directorio)
 {
     public async Task<Resultado<IReadOnlyList<VersionDePresupuestoDto>>> HandleAsync(Guid ordenId, CancellationToken ct)
@@ -17,7 +20,12 @@ public sealed class ListarVersionesPresupuestoHandler(IOrdenReparacionRepositori
 
         var versiones = await ordenes.ListarVersionesPresupuestoAsync(ordenId, ct);
         var nombres = await directorio.ObtenerNombresAsync(
-            versiones.Where(v => v.CreadoPorUsuarioId is not null).Select(v => v.CreadoPorUsuarioId!.Value).Distinct(), ct);
+            versiones
+                .SelectMany(v => VersionDePresupuestoDto.UsuariosDe(v))
+                .Where(id => id is not null)
+                .Select(id => id!.Value)
+                .Distinct(),
+            ct);
         return Resultado<IReadOnlyList<VersionDePresupuestoDto>>.Ok(
             versiones.Select(v => VersionDePresupuestoDto.Desde(v, nombres)).ToList());
     }

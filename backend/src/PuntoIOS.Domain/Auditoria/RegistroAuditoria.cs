@@ -36,6 +36,9 @@ public static class AccionesAuditadas
 
     /// <summary>Se creó una versión nueva del presupuesto (el cambio guarda versión y total, anteriores y nuevos).</summary>
     public const string PresupuestoCreado = "presupuesto_creado";
+
+    /// <summary>Se registró la respuesta (aprobado o rechazado) a la versión vigente del presupuesto.</summary>
+    public const string PresupuestoRespondido = "presupuesto_respondido";
 }
 
 /// <summary>

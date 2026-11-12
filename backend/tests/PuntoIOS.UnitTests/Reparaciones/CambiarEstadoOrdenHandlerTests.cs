@@ -13,6 +13,12 @@ public class CambiarEstadoOrdenHandlerTests
     private static readonly Guid LocalId = Guid.NewGuid();
     private static readonly Guid UsuarioId = Guid.NewGuid();
 
+    private static readonly string[] HastaPresupuestoEnviado =
+    [
+        EstadosDeReparacion.EnPruebas, EstadosDeReparacion.EnDiagnostico,
+        EstadosDeReparacion.EsperandoPresupuesto, EstadosDeReparacion.PresupuestoEnviado,
+    ];
+
     private readonly ClienteRepoEnMemoria _clientes = new();
     private readonly DispositivoRepoEnMemoria _dispositivos = new();
     private readonly AuditoriaRepoEnMemoria _auditoria = new();
@@ -34,6 +40,15 @@ public class CambiarEstadoOrdenHandlerTests
     private CambiarEstadoOrdenHandler Crear() =>
         new(_ordenes, _clientes, _dispositivos, _auditoria, new DirectorioFijo([]),
             new LocalFijo(LocalId), new UsuarioFijo(UsuarioId), new RelojFijo(Ahora));
+
+    /// <summary>Mueve la orden directo en el dominio (sin pasar por el handler ni dejar auditoría).</summary>
+    private void Llevar(params string[] estados)
+    {
+        foreach (var estado in estados)
+        {
+            _orden.CambiarEstado(estado);
+        }
+    }
 
     [Fact]
     public async Task Una_orden_inexistente_devuelve_no_encontrado()
@@ -68,6 +83,37 @@ public class CambiarEstadoOrdenHandlerTests
         Assert.Equal(EstadosDeReparacion.Recibido, _orden.Estado);
         Assert.Empty(_auditoria.Registros);
         Assert.Equal(0, _ordenes.Guardados);
+    }
+
+    [Theory]
+    [InlineData(EstadosDeReparacion.Aprobado)]
+    [InlineData(EstadosDeReparacion.PresupuestoRechazado)]
+    public async Task Aprobar_o_rechazar_el_presupuesto_no_se_hace_con_el_cambio_generico_aunque_la_tabla_lo_permita(string estado)
+    {
+        Llevar([.. HastaPresupuestoEnviado, EstadosDeReparacion.EsperandoAprobacion]);
+        Assert.True(MaquinaDeEstados.PuedeTransicionar(_orden.Estado, estado));
+
+        var resultado = await Crear().HandleAsync(new CambiarEstadoOrdenCommand(_orden.Id, estado), default);
+
+        Assert.Equal("usar_respuesta_presupuesto", resultado.Error!.Codigo);
+        Assert.Equal(EstadosDeReparacion.EsperandoAprobacion, _orden.Estado);
+        Assert.Empty(_auditoria.Registros);
+        Assert.Equal(0, _ordenes.Guardados);
+    }
+
+    [Fact]
+    public async Task Esperando_aprobacion_no_ofrece_aprobado_ni_presupuesto_rechazado_como_estados_disponibles()
+    {
+        Llevar(HastaPresupuestoEnviado);
+
+        var resultado = await Crear().HandleAsync(new CambiarEstadoOrdenCommand(_orden.Id, EstadosDeReparacion.EsperandoAprobacion), default);
+
+        // En la tabla son los únicos dos destinos, pero solo se llega a ellos respondiendo el presupuesto.
+        Assert.True(resultado.EsExitoso);
+        Assert.Equal(EstadosDeReparacion.EsperandoAprobacion, resultado.Valor!.Estado);
+        Assert.DoesNotContain(EstadosDeReparacion.Aprobado, resultado.Valor.EstadosDisponibles);
+        Assert.DoesNotContain(EstadosDeReparacion.PresupuestoRechazado, resultado.Valor.EstadosDisponibles);
+        Assert.Empty(resultado.Valor.EstadosDisponibles);
     }
 
     [Fact]

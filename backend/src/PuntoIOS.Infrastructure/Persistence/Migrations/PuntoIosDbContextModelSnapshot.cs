@@ -318,7 +318,7 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         new
                         {
                             Codigo = "presupuestos.gestionar",
-                            Descripcion = "Crear versiones del presupuesto de una orden de reparación (queda registrado)"
+                            Descripcion = "Crear versiones del presupuesto y registrar su aprobación o rechazo (queda registrado)"
                         });
                 });
 
@@ -854,6 +854,18 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("OrdenId")
                         .HasColumnType("uuid")
                         .HasColumnName("orden_id");
+
+                    b.Property<DateTimeOffset?>("RespondidoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("respondido_en");
+
+                    b.Property<Guid?>("RespondidoPorUsuarioId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("respondido_por_usuario_id");
+
+                    b.Property<bool?>("RespuestaAprobada")
+                        .HasColumnType("boolean")
+                        .HasColumnName("respuesta_aprobada");
 
                     b.Property<decimal>("Total")
                         .HasPrecision(12, 2)

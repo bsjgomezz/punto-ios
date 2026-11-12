@@ -45,6 +45,13 @@ public class PresupuestoEndpointTests(PostgresFixture postgres) : IClassFixture<
     private static Task<HttpResponseMessage> PresupuestarAsync(HttpClient cliente, Guid ordenId, List<ItemPresupuestoRequest>? items) =>
         cliente.PostAsJsonAsync($"{Ruta}/{ordenId}/presupuestos", new CrearVersionPresupuestoRequest(items));
 
+    /// <summary>Registra la respuesta al presupuesto vigente: es la única forma de pasar a "aprobado" o "presupuesto_rechazado".</summary>
+    private static async Task ResponderPresupuestoAsync(HttpClient cliente, Guid ordenId, bool aprobado)
+    {
+        var respuesta = await cliente.PostAsJsonAsync($"{Ruta}/{ordenId}/presupuestos/respuesta", new ResponderPresupuestoRequest(aprobado));
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+    }
+
     private static List<ItemPresupuestoRequest> ItemsValidos() =>
     [
         new("Pantalla OLED", "repuesto", 15000m),
@@ -122,7 +129,8 @@ public class PresupuestoEndpointTests(PostgresFixture postgres) : IClassFixture<
         var orden = await OrdenAsync(admin);
         await LlevarAsync(admin, orden.Id, HastaEsperandoPresupuesto);
         Assert.Equal(HttpStatusCode.OK, (await PresupuestarAsync(admin, orden.Id, ItemsValidos())).StatusCode);
-        await LlevarAsync(admin, orden.Id, "esperando_aprobacion", "aprobado");
+        await LlevarAsync(admin, orden.Id, "esperando_aprobacion");
+        await ResponderPresupuestoAsync(admin, orden.Id, aprobado: true);
 
         var respuesta = await PresupuestarAsync(admin, orden.Id, [new("Conector de carga", "repuesto", 8000m)]);
 
@@ -140,7 +148,8 @@ public class PresupuestoEndpointTests(PostgresFixture postgres) : IClassFixture<
         var orden = await OrdenAsync(admin);
         await LlevarAsync(admin, orden.Id, HastaEsperandoPresupuesto);
         Assert.Equal(HttpStatusCode.OK, (await PresupuestarAsync(admin, orden.Id, ItemsValidos())).StatusCode);
-        await LlevarAsync(admin, orden.Id, "esperando_aprobacion", "presupuesto_rechazado");
+        await LlevarAsync(admin, orden.Id, "esperando_aprobacion");
+        await ResponderPresupuestoAsync(admin, orden.Id, aprobado: false);
 
         var respuesta = await PresupuestarAsync(admin, orden.Id, [new("Pantalla genérica", "repuesto", 9000m)]);
 
@@ -182,7 +191,9 @@ public class PresupuestoEndpointTests(PostgresFixture postgres) : IClassFixture<
         Assert.Null(sinCambios.PresupuestoVigente);
 
         Assert.Equal(HttpStatusCode.OK, (await PresupuestarAsync(admin, orden.Id, ItemsValidos())).StatusCode);
-        await LlevarAsync(admin, orden.Id, "esperando_aprobacion", "presupuesto_rechazado", "entregado");
+        await LlevarAsync(admin, orden.Id, "esperando_aprobacion");
+        await ResponderPresupuestoAsync(admin, orden.Id, aprobado: false);
+        await LlevarAsync(admin, orden.Id, "entregado");
 
         var entregada = await PresupuestarAsync(admin, orden.Id, ItemsValidos());
         Assert.Equal(HttpStatusCode.Conflict, entregada.StatusCode);

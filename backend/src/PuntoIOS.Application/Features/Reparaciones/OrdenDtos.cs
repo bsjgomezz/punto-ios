@@ -10,7 +10,8 @@ namespace PuntoIOS.Application.Features.Reparaciones;
 
 /// <summary>
 /// Orden completa para el personal. El desbloqueo nunca viaja acá: solo si existe y de qué tipo es.
-/// <c>EstadosDisponibles</c>: estados a los que se puede pasar desde el actual.
+/// <c>EstadosDisponibles</c>: estados a los que se puede pasar desde el actual con el cambio de estado genérico
+/// (no incluye "aprobado" ni "presupuesto_rechazado", que solo se alcanzan respondiendo el presupuesto).
 /// Es la vista interna del taller: incluye <c>NotasInternas</c>, que son privadas. Un futuro DTO público para el
 /// cliente (portal de seguimiento, S18) NO debe reutilizar este record ni copiar <c>NotasInternas</c>.
 /// <c>PresupuestoVigente</c>: la versión de presupuesto de número más alto, o null si todavía no se presupuestó.
@@ -46,14 +47,21 @@ public sealed record FotoDto(Guid Id, DateTimeOffset CreadoEn);
 
 public sealed record ItemPresupuestoDto(string Descripcion, string Tipo, decimal Monto);
 
-/// <summary>Una versión del presupuesto de una orden. <c>CreadoPor</c>: nombre de quien la creó.</summary>
+/// <summary>
+/// Una versión del presupuesto de una orden. <c>CreadoPor</c>: nombre de quien la creó.
+/// <c>RespuestaAprobada</c>: true = aprobada, false = rechazada, null = sin respuesta todavía.
+/// <c>RespondidoPor</c>: nombre de quien del staff registró la respuesta.
+/// </summary>
 public sealed record VersionDePresupuestoDto(
     Guid Id,
     int Numero,
     IReadOnlyList<ItemPresupuestoDto> Items,
     decimal Total,
     string? CreadoPor,
-    DateTimeOffset CreadoEn)
+    DateTimeOffset CreadoEn,
+    bool? RespuestaAprobada,
+    DateTimeOffset? RespondidoEn,
+    string? RespondidoPor)
 {
     public static VersionDePresupuestoDto Desde(VersionDePresupuesto version, IReadOnlyDictionary<Guid, string> nombres) =>
         new(
@@ -62,7 +70,14 @@ public sealed record VersionDePresupuestoDto(
             version.Items.Select(i => new ItemPresupuestoDto(i.Descripcion, i.Tipo, i.Monto)).ToList(),
             version.Total,
             version.CreadoPorUsuarioId is { } c ? nombres.GetValueOrDefault(c) : null,
-            version.CreadoEn);
+            version.CreadoEn,
+            version.RespuestaAprobada,
+            version.RespondidoEn,
+            version.RespondidoPorUsuarioId is { } r ? nombres.GetValueOrDefault(r) : null);
+
+    /// <summary>Usuarios cuyos nombres hacen falta para armar el DTO de esta versión (quién la creó y quién registró la respuesta).</summary>
+    public static IEnumerable<Guid?> UsuariosDe(VersionDePresupuesto version) =>
+        [version.CreadoPorUsuarioId, version.RespondidoPorUsuarioId];
 }
 
 /// <summary>Fila de los listados de órdenes.</summary>
@@ -90,7 +105,7 @@ internal sealed class ArmadorDeOrdenes(
     {
         var vigentes = (await repositorioDeOrdenes.ObtenerVersionesVigentesPresupuestoAsync(ordenes.Select(o => o.Id), ct))
             .ToDictionary(v => v.OrdenId);
-        var (porCliente, porEquipo, nombres) = await BuscarAsync(ordenes, vigentes.Values.Select(v => v.CreadoPorUsuarioId), ct);
+        var (porCliente, porEquipo, nombres) = await BuscarAsync(ordenes, vigentes.Values.SelectMany(v => VersionDePresupuestoDto.UsuariosDe(v)), ct);
         return ordenes
             .Select(o => new OrdenReparacionDto(
                 o.Id,
@@ -108,7 +123,11 @@ internal sealed class ArmadorDeOrdenes(
                 o.CreadoEn,
                 new ChecklistDto(o.ChecklistItems.ToDictionary(i => i.Codigo, i => i.Valor), o.SaludBateria, o.NotasChecklist),
                 o.NoEnciende,
-                MaquinaDeEstados.SiguientesEstados(o.Estado),
+                // Sin "aprobado" ni "presupuesto_rechazado": a esos estados solo se llega respondiendo el presupuesto
+                // (POST .../presupuestos/respuesta), y el cambio de estado genérico los rechaza.
+                MaquinaDeEstados.SiguientesEstados(o.Estado)
+                    .Where(e => e is not (EstadosDeReparacion.Aprobado or EstadosDeReparacion.PresupuestoRechazado))
+                    .ToList(),
                 o.Pruebas,
                 o.Diagnostico,
                 o.Mediciones,

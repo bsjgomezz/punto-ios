@@ -16,10 +16,11 @@ public sealed record ActualizarDatosTecnicosCommand(
     string? Diagnostico,
     string? Mediciones,
     List<string>? ComponentesAfectados,
+    string? TrabajoRealizado,
     string? NotasInternas);
 
 /// <summary>
-/// Reemplaza los datos técnicos de la orden (pruebas, diagnóstico, mediciones, componentes afectados y notas internas)
+/// Reemplaza los datos técnicos de la orden (pruebas, diagnóstico, mediciones, componentes afectados, trabajo realizado y notas internas)
 /// y deja constancia de qué campos cambiaron, quién y cuándo. Si no cambió nada no se registra nada.
 /// </summary>
 public sealed class ActualizarDatosTecnicosHandler(
@@ -46,7 +47,8 @@ public sealed class ActualizarDatosTecnicosHandler(
             // Las reglas (largos, cantidad de componentes) viven en el dominio, que valida todo antes de cambiar
             // algún campo: si tira, la orden queda como estaba.
             cambios = orden.ActualizarDatosTecnicos(
-                comando.Pruebas, comando.Diagnostico, comando.Mediciones, comando.ComponentesAfectados, comando.NotasInternas);
+                comando.Pruebas, comando.Diagnostico, comando.Mediciones, comando.ComponentesAfectados,
+                comando.TrabajoRealizado, comando.NotasInternas);
         }
         catch (ArgumentException ex)
         {

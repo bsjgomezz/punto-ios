@@ -27,6 +27,7 @@ public class DatosTecnicosTests
         Assert.Null(orden.Diagnostico);
         Assert.Null(orden.Mediciones);
         Assert.Empty(orden.ComponentesAfectados);
+        Assert.Null(orden.TrabajoRealizado);
         Assert.Null(orden.NotasInternas);
     }
 
@@ -34,9 +35,10 @@ public class DatosTecnicosTests
     public void Si_cambia_un_solo_campo_solo_ese_aparece_en_los_cambios()
     {
         var orden = NuevaOrden();
-        orden.ActualizarDatosTecnicos("Carga con otro cable", null, "5,1 V", ["Pantalla"], "Cliente apurado");
+        orden.ActualizarDatosTecnicos("Carga con otro cable", null, "5,1 V", ["Pantalla"], "Cambio de conector", "Cliente apurado");
 
-        var cambios = orden.ActualizarDatosTecnicos("Carga con otro cable", "Conector sulfatado", "5,1 V", ["Pantalla"], "Cliente apurado");
+        var cambios = orden.ActualizarDatosTecnicos(
+            "Carga con otro cable", "Conector sulfatado", "5,1 V", ["Pantalla"], "Cambio de conector", "Cliente apurado");
 
         Assert.Equal([new CambioDeCampo("diagnostico", null, "Conector sulfatado")], cambios);
         Assert.Equal("Conector sulfatado", orden.Diagnostico);
@@ -48,7 +50,8 @@ public class DatosTecnicosTests
         var orden = NuevaOrden();
 
         var cambios = orden.ActualizarDatosTecnicos(
-            "  Prueba de carga  ", "Conector roto", "0,2 A", ["Conector de carga", "IC de carga"], "No cobrar el envío");
+            "  Prueba de carga  ", "Conector roto", "0,2 A", ["Conector de carga", "IC de carga"], " Cambio de conector ",
+            "No cobrar el envío");
 
         Assert.Equal(
             [
@@ -56,20 +59,22 @@ public class DatosTecnicosTests
                 new CambioDeCampo("diagnostico", null, "Conector roto"),
                 new CambioDeCampo("mediciones", null, "0,2 A"),
                 new CambioDeCampo("componentes_afectados", null, "Conector de carga, IC de carga"),
+                new CambioDeCampo("trabajo_realizado", null, "Cambio de conector"),
                 new CambioDeCampo("notas_internas", null, "No cobrar el envío"),
             ],
             cambios);
         Assert.Equal("Prueba de carga", orden.Pruebas);
         Assert.Equal(["Conector de carga", "IC de carga"], orden.ComponentesAfectados);
+        Assert.Equal("Cambio de conector", orden.TrabajoRealizado);
     }
 
     [Fact]
     public void Si_no_cambia_nada_no_hay_cambios()
     {
         var orden = NuevaOrden();
-        orden.ActualizarDatosTecnicos("Prueba", "Diag", "Med", ["Pantalla", "Batería"], "Nota");
+        orden.ActualizarDatosTecnicos("Prueba", "Diag", "Med", ["Pantalla", "Batería"], "Trabajo", "Nota");
 
-        var cambios = orden.ActualizarDatosTecnicos(" Prueba ", "Diag", "Med", [" Pantalla", "Batería "], "Nota");
+        var cambios = orden.ActualizarDatosTecnicos(" Prueba ", "Diag", "Med", [" Pantalla", "Batería "], " Trabajo ", "Nota");
 
         Assert.Empty(cambios);
     }
@@ -78,18 +83,20 @@ public class DatosTecnicosTests
     public void Vaciar_campos_los_deja_en_null_y_la_lista_vacia_se_registra_como_null()
     {
         var orden = NuevaOrden();
-        orden.ActualizarDatosTecnicos("Prueba", null, null, ["Pantalla"], null);
+        orden.ActualizarDatosTecnicos("Prueba", null, null, ["Pantalla"], "Cambio de pantalla", null);
 
-        var cambios = orden.ActualizarDatosTecnicos("   ", null, null, null, "");
+        var cambios = orden.ActualizarDatosTecnicos("   ", null, null, null, "  ", "");
 
         Assert.Equal(
             [
                 new CambioDeCampo("pruebas", "Prueba", null),
                 new CambioDeCampo("componentes_afectados", "Pantalla", null),
+                new CambioDeCampo("trabajo_realizado", "Cambio de pantalla", null),
             ],
             cambios);
         Assert.Null(orden.Pruebas);
         Assert.Empty(orden.ComponentesAfectados);
+        Assert.Null(orden.TrabajoRealizado);
     }
 
     [Theory]
@@ -97,19 +104,22 @@ public class DatosTecnicosTests
     [InlineData(1)]
     [InlineData(2)]
     [InlineData(3)]
+    [InlineData(4)]
     public void Un_texto_que_excede_el_maximo_se_rechaza_sin_cambiar_nada(int campo)
     {
         var orden = NuevaOrden();
         var largo = new string('x', OrdenReparacion.LargoMaximoTextoTecnico + 1);
-        var textos = new string?[] { "ok", "ok", "ok", "ok" };
+        // 0 pruebas, 1 diagnóstico, 2 mediciones, 3 trabajo realizado, 4 notas internas.
+        var textos = new string?[] { "ok", "ok", "ok", "ok", "ok" };
         textos[campo] = largo;
 
         Assert.Throws<ArgumentException>(() =>
-            orden.ActualizarDatosTecnicos(textos[0], textos[1], textos[2], ["Pantalla"], textos[3]));
+            orden.ActualizarDatosTecnicos(textos[0], textos[1], textos[2], ["Pantalla"], textos[3], textos[4]));
 
         Assert.Null(orden.Pruebas);
         Assert.Null(orden.Diagnostico);
         Assert.Null(orden.Mediciones);
+        Assert.Null(orden.TrabajoRealizado);
         Assert.Null(orden.NotasInternas);
         Assert.Empty(orden.ComponentesAfectados);
     }
@@ -120,9 +130,35 @@ public class DatosTecnicosTests
         var orden = NuevaOrden();
         var justo = new string('x', OrdenReparacion.LargoMaximoTextoTecnico);
 
-        var cambios = orden.ActualizarDatosTecnicos(justo, null, null, null, null);
+        var cambios = orden.ActualizarDatosTecnicos(justo, null, null, null, null, null);
 
         Assert.Single(cambios);
+    }
+
+    [Fact]
+    public void El_trabajo_realizado_justo_en_el_maximo_se_acepta()
+    {
+        var orden = NuevaOrden();
+        var justo = new string('x', OrdenReparacion.LargoMaximoTextoTecnico);
+
+        var cambios = orden.ActualizarDatosTecnicos(null, null, null, null, justo, null);
+
+        Assert.Equal([new CambioDeCampo("trabajo_realizado", null, justo)], cambios);
+        Assert.Equal(justo, orden.TrabajoRealizado);
+    }
+
+    [Fact]
+    public void El_trabajo_realizado_se_reemplaza_y_registra_el_valor_anterior()
+    {
+        var orden = NuevaOrden();
+        orden.ActualizarDatosTecnicos(null, null, null, null, "Cambio de conector", null);
+
+        var cambios = orden.ActualizarDatosTecnicos(null, null, null, null, "Cambio de conector y limpieza de placa", null);
+
+        Assert.Equal(
+            [new CambioDeCampo("trabajo_realizado", "Cambio de conector", "Cambio de conector y limpieza de placa")],
+            cambios);
+        Assert.Equal("Cambio de conector y limpieza de placa", orden.TrabajoRealizado);
     }
 
     [Fact]
@@ -131,7 +167,7 @@ public class DatosTecnicosTests
         var orden = NuevaOrden();
         var componentes = Enumerable.Range(1, OrdenReparacion.MaximoComponentesAfectados + 1).Select(i => $"Componente {i}").ToList();
 
-        Assert.Throws<ArgumentException>(() => orden.ActualizarDatosTecnicos(null, null, null, componentes, null));
+        Assert.Throws<ArgumentException>(() => orden.ActualizarDatosTecnicos(null, null, null, componentes, null, null));
         Assert.Empty(orden.ComponentesAfectados);
     }
 
@@ -142,7 +178,7 @@ public class DatosTecnicosTests
         var componentes = Enumerable.Range(1, OrdenReparacion.MaximoComponentesAfectados).Select(i => $"Componente {i}").ToList();
         componentes.Add("Componente 1");
 
-        orden.ActualizarDatosTecnicos(null, null, null, componentes, null);
+        orden.ActualizarDatosTecnicos(null, null, null, componentes, null, null);
 
         Assert.Equal(OrdenReparacion.MaximoComponentesAfectados, orden.ComponentesAfectados.Count);
     }
@@ -153,7 +189,7 @@ public class DatosTecnicosTests
         var orden = NuevaOrden();
         var largo = new string('x', OrdenReparacion.LargoMaximoComponenteAfectado + 1);
 
-        Assert.Throws<ArgumentException>(() => orden.ActualizarDatosTecnicos(null, null, null, ["Pantalla", largo], null));
+        Assert.Throws<ArgumentException>(() => orden.ActualizarDatosTecnicos(null, null, null, ["Pantalla", largo], null, null));
         Assert.Empty(orden.ComponentesAfectados);
     }
 
@@ -162,7 +198,7 @@ public class DatosTecnicosTests
     {
         var orden = NuevaOrden();
 
-        orden.ActualizarDatosTecnicos(null, null, null, ["", "   ", "Pantalla", "\t"], null);
+        orden.ActualizarDatosTecnicos(null, null, null, ["", "   ", "Pantalla", "\t"], null, null);
 
         Assert.Equal(["Pantalla"], orden.ComponentesAfectados);
     }
@@ -173,7 +209,7 @@ public class DatosTecnicosTests
         var orden = NuevaOrden();
 
         orden.ActualizarDatosTecnicos(
-            null, null, null, ["Pantalla", "Batería", "  Pantalla ", "IC de carga", "Batería"], null);
+            null, null, null, ["Pantalla", "Batería", "  Pantalla ", "IC de carga", "Batería"], null, null);
 
         Assert.Equal(["Pantalla", "Batería", "IC de carga"], orden.ComponentesAfectados);
     }
@@ -182,9 +218,9 @@ public class DatosTecnicosTests
     public void Cambiar_el_orden_de_los_componentes_cuenta_como_cambio()
     {
         var orden = NuevaOrden();
-        orden.ActualizarDatosTecnicos(null, null, null, ["Pantalla", "Batería"], null);
+        orden.ActualizarDatosTecnicos(null, null, null, ["Pantalla", "Batería"], null, null);
 
-        var cambios = orden.ActualizarDatosTecnicos(null, null, null, ["Batería", "Pantalla"], null);
+        var cambios = orden.ActualizarDatosTecnicos(null, null, null, ["Batería", "Pantalla"], null, null);
 
         Assert.Equal([new CambioDeCampo("componentes_afectados", "Pantalla, Batería", "Batería, Pantalla")], cambios);
     }
@@ -222,7 +258,7 @@ public class ActualizarDatosTecnicosHandlerTests
     public async Task Una_orden_inexistente_devuelve_no_encontrado()
     {
         var resultado = await Crear().HandleAsync(
-            new ActualizarDatosTecnicosCommand(Guid.NewGuid(), "Prueba", null, null, null, null), default);
+            new ActualizarDatosTecnicosCommand(Guid.NewGuid(), "Prueba", null, null, null, null, null), default);
 
         Assert.Equal("orden_inexistente", resultado.Error!.Codigo);
         Assert.Empty(_auditoria.Registros);
@@ -234,7 +270,7 @@ public class ActualizarDatosTecnicosHandlerTests
         var largo = new string('x', OrdenReparacion.LargoMaximoTextoTecnico + 1);
 
         var resultado = await Crear().HandleAsync(
-            new ActualizarDatosTecnicosCommand(_orden.Id, "Prueba", largo, null, null, null), default);
+            new ActualizarDatosTecnicosCommand(_orden.Id, "Prueba", largo, null, null, null, null), default);
 
         Assert.Equal(TipoError.Validacion, resultado.Error!.Tipo);
         Assert.Equal("datos_tecnicos_invalidos", resultado.Error.Codigo);
@@ -245,12 +281,31 @@ public class ActualizarDatosTecnicosHandlerTests
     }
 
     [Fact]
+    public async Task Un_trabajo_realizado_demasiado_largo_devuelve_error_de_validacion_sin_cambiar_nada()
+    {
+        var largo = new string('x', OrdenReparacion.LargoMaximoTextoTecnico + 1);
+
+        var resultado = await Crear().HandleAsync(
+            new ActualizarDatosTecnicosCommand(_orden.Id, "Prueba", "Diag", null, ["Pantalla"], largo, "Nota"), default);
+
+        Assert.Equal(TipoError.Validacion, resultado.Error!.Tipo);
+        Assert.Equal("datos_tecnicos_invalidos", resultado.Error.Codigo);
+        Assert.Null(_orden.Pruebas);
+        Assert.Null(_orden.Diagnostico);
+        Assert.Empty(_orden.ComponentesAfectados);
+        Assert.Null(_orden.TrabajoRealizado);
+        Assert.Null(_orden.NotasInternas);
+        Assert.Empty(_auditoria.Registros);
+        Assert.Equal(0, _ordenes.Guardados);
+    }
+
+    [Fact]
     public async Task Demasiados_componentes_devuelven_error_de_validacion()
     {
         var componentes = Enumerable.Range(1, OrdenReparacion.MaximoComponentesAfectados + 1).Select(i => $"C{i}").ToList();
 
         var resultado = await Crear().HandleAsync(
-            new ActualizarDatosTecnicosCommand(_orden.Id, null, null, null, componentes, null), default);
+            new ActualizarDatosTecnicosCommand(_orden.Id, null, null, null, componentes, null, null), default);
 
         Assert.Equal("datos_tecnicos_invalidos", resultado.Error!.Codigo);
         Assert.Empty(_auditoria.Registros);
@@ -260,7 +315,8 @@ public class ActualizarDatosTecnicosHandlerTests
     public async Task Una_actualizacion_valida_devuelve_los_datos_y_deja_registro_de_los_cambios()
     {
         var resultado = await Crear().HandleAsync(
-            new ActualizarDatosTecnicosCommand(_orden.Id, "Prueba de carga", "Conector roto", null, ["Conector de carga"], "Ojo con el marco"),
+            new ActualizarDatosTecnicosCommand(
+                _orden.Id, "Prueba de carga", "Conector roto", null, ["Conector de carga"], "Cambio de conector", "Ojo con el marco"),
             default);
 
         Assert.True(resultado.EsExitoso);
@@ -269,6 +325,7 @@ public class ActualizarDatosTecnicosHandlerTests
         Assert.Equal("Conector roto", dto.Diagnostico);
         Assert.Null(dto.Mediciones);
         Assert.Equal(["Conector de carga"], dto.ComponentesAfectados);
+        Assert.Equal("Cambio de conector", dto.TrabajoRealizado);
         Assert.Equal("Ojo con el marco", dto.NotasInternas);
         Assert.Equal(1, _ordenes.Guardados);
 
@@ -281,6 +338,7 @@ public class ActualizarDatosTecnicosHandlerTests
                 new CambioDeCampo("pruebas", null, "Prueba de carga"),
                 new CambioDeCampo("diagnostico", null, "Conector roto"),
                 new CambioDeCampo("componentes_afectados", null, "Conector de carga"),
+                new CambioDeCampo("trabajo_realizado", null, "Cambio de conector"),
                 new CambioDeCampo("notas_internas", null, "Ojo con el marco"),
             ],
             registro.Cambios);
@@ -289,7 +347,7 @@ public class ActualizarDatosTecnicosHandlerTests
     [Fact]
     public async Task Si_no_cambia_nada_no_se_audita_ni_se_guarda()
     {
-        var comando = new ActualizarDatosTecnicosCommand(_orden.Id, "Prueba", null, null, ["Pantalla"], null);
+        var comando = new ActualizarDatosTecnicosCommand(_orden.Id, "Prueba", null, null, ["Pantalla"], null, null);
         await Crear().HandleAsync(comando, default);
 
         var resultado = await Crear().HandleAsync(comando, default);

@@ -230,6 +230,7 @@ describe("OrdenDetalle", () => {
       diagnostico: "Conector sulfatado",
       mediciones: null,
       componentesAfectados: ["Conector de carga"],
+      trabajoRealizado: null,
       notasInternas: "Cliente apurado",
     };
 
@@ -256,6 +257,7 @@ describe("OrdenDetalle", () => {
       expect(seccion.getByLabelText("Pruebas realizadas")).toHaveValue("Probé el cargador original");
       expect(seccion.getByLabelText("Diagnóstico")).toHaveValue("Conector sulfatado");
       expect(seccion.getByLabelText("Mediciones")).toHaveValue("");
+      expect(seccion.getByLabelText("Trabajo realizado")).toHaveValue("");
       expect(seccion.getByLabelText("Notas internas")).toHaveValue("Cliente apurado");
       expect(seccion.getByText("Privadas: no las ve el cliente.")).toBeInTheDocument();
       const lista = within(seccion.getByRole("list", { name: "Componentes afectados" }));
@@ -296,7 +298,7 @@ describe("OrdenDetalle", () => {
       expect(nombres()).toEqual(["Conector de carga", "Flex de botones"]);
     });
 
-    it("guarda con PUT los cinco campos y muestra lo que devuelve el backend", async () => {
+    it("guarda con PUT los seis campos y muestra lo que devuelve el backend", async () => {
       mocks.getIdToken.mockResolvedValue("t");
       const actualizada = {
         ...ordenConDatos,
@@ -320,6 +322,58 @@ describe("OrdenDetalle", () => {
         diagnostico: "Conector roto",
         mediciones: null,
         componentesAfectados: ["Conector de carga", "Batería"],
+        trabajoRealizado: null,
+        notasInternas: "Cliente apurado",
+      });
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+
+    it("guarda el trabajo realizado y el historial muestra el cambio con su nombre", async () => {
+      mocks.getIdToken.mockResolvedValue("t");
+      const actualizada = { ...ordenConDatos, trabajoRealizado: "Cambio de conector de carga" };
+      let guardado = false;
+      const fetchMock = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>((url, init) => {
+        if (url.includes("/api/v1/me")) return Promise.resolve(json(me(PERMISOS_TECNICO)));
+        if (init?.method === "PUT" && url.endsWith("/datos-tecnicos")) {
+          guardado = true;
+          return Promise.resolve(json(actualizada));
+        }
+        if (url.includes("/historial")) {
+          const items = guardado
+            ? [
+                {
+                  id: "r1",
+                  accion: "editado",
+                  usuario: "Técnico 1",
+                  fecha: "2026-11-12T12:00:00Z",
+                  cambios: [{ campo: "trabajo_realizado", anterior: null, nuevo: "Cambio de conector de carga" }],
+                },
+              ]
+            : [];
+          return Promise.resolve(json({ items }));
+        }
+        if (url.endsWith("/fotos")) return Promise.resolve(json([]));
+        return Promise.resolve(json(ordenConDatos));
+      });
+      vi.stubGlobal("fetch", fetchMock);
+
+      render(<OrdenDetalle id="o1" />);
+
+      fireEvent.change(await screen.findByLabelText("Trabajo realizado"), { target: { value: "Cambio de conector de carga" } });
+      fireEvent.click(screen.getByRole("button", { name: "Guardar datos técnicos" }));
+
+      const historial = within(await screen.findByRole("region", { name: "Historial de la orden" }));
+      expect(
+        await historial.findByText((_, el) => el?.tagName === "SPAN" && el.textContent === "Editó: Trabajo realizado"),
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText("Trabajo realizado")).toHaveValue("Cambio de conector de carga");
+      const put = fetchMock.mock.calls.find(([url, init]) => init?.method === "PUT" && url.endsWith("/reparaciones/o1/datos-tecnicos"));
+      expect(JSON.parse(String(put![1]!.body))).toEqual({
+        pruebas: "Probé el cargador original",
+        diagnostico: "Conector sulfatado",
+        mediciones: null,
+        componentesAfectados: ["Conector de carga"],
+        trabajoRealizado: "Cambio de conector de carga",
         notasInternas: "Cliente apurado",
       });
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();

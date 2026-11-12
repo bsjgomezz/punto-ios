@@ -37,6 +37,7 @@ public sealed record OrdenReparacionDto(
     string? Diagnostico,
     string? Mediciones,
     IReadOnlyList<string> ComponentesAfectados,
+    string? TrabajoRealizado,
     string? NotasInternas,
     VersionDePresupuestoDto? PresupuestoVigente);
 
@@ -132,6 +133,7 @@ internal sealed class ArmadorDeOrdenes(
                 o.Diagnostico,
                 o.Mediciones,
                 o.ComponentesAfectados,
+                o.TrabajoRealizado,
                 o.NotasInternas, // Solo para el personal: no pasar NotasInternas a un DTO público (S18).
                 vigentes.TryGetValue(o.Id, out var vigente) ? VersionDePresupuestoDto.Desde(vigente, nombres) : null))
             .ToList();

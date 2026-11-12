@@ -47,6 +47,7 @@ public sealed record ActualizarDatosTecnicosRequest(
     string? Diagnostico,
     string? Mediciones,
     List<string>? ComponentesAfectados,
+    string? TrabajoRealizado,
     string? NotasInternas);
 
 /// <summary>Ítem del presupuesto. <c>Tipo</c>: "mano_obra" o "repuesto".</summary>
@@ -165,7 +166,7 @@ public sealed class ReparacionesController(
     }
 
     /// <summary>
-    /// Reemplaza los datos técnicos (pruebas, diagnóstico, mediciones, componentes afectados y notas internas).
+    /// Reemplaza los datos técnicos (pruebas, diagnóstico, mediciones, componentes afectados, trabajo realizado y notas internas).
     /// Solo quien trabaja en reparaciones. Los campos que cambiaron quedan en el historial.
     /// </summary>
     [HttpPut("{id:guid}/datos-tecnicos")]
@@ -175,7 +176,8 @@ public sealed class ReparacionesController(
     {
         var resultado = await actualizarDatosTecnicos.HandleAsync(
             new ActualizarDatosTecnicosCommand(
-                id, request.Pruebas, request.Diagnostico, request.Mediciones, request.ComponentesAfectados, request.NotasInternas),
+                id, request.Pruebas, request.Diagnostico, request.Mediciones, request.ComponentesAfectados,
+                request.TrabajoRealizado, request.NotasInternas),
             ct);
         return resultado.EsExitoso ? Ok(resultado.Valor) : resultado.Error!.ToProblem();
     }

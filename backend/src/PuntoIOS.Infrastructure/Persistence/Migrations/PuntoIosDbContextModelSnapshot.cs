@@ -809,6 +809,11 @@ namespace PuntoIOS.Infrastructure.Persistence.Migrations
                         .HasColumnType("text[]")
                         .HasColumnName("tipos_reparacion");
 
+                    b.Property<string>("TrabajoRealizado")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("trabajo_realizado");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ClienteId");

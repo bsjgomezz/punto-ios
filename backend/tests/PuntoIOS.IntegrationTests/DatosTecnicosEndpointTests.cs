@@ -41,7 +41,8 @@ public class DatosTecnicosEndpointTests(PostgresFixture postgres) : IClassFixtur
             .Items.Where(h => h.Accion == AccionesAuditadas.Editado).ToList();
 
     private static readonly ActualizarDatosTecnicosRequest Datos = new(
-        "Carga con otro cable", "Conector sulfatado", "0,2 A con 5 V", ["Conector de carga", "IC de carga"], "Cliente apurado");
+        "Carga con otro cable", "Conector sulfatado", "0,2 A con 5 V", ["Conector de carga", "IC de carga"],
+        "Cambio de conector de carga", "Cliente apurado");
 
     [Fact]
     public async Task El_tecnico_carga_los_datos_tecnicos_y_quedan_en_la_orden_y_en_el_historial()
@@ -50,6 +51,7 @@ public class DatosTecnicosEndpointTests(PostgresFixture postgres) : IClassFixtur
         var admin = api.ClienteAdministrador();
         var orden = await OrdenAsync(admin);
         Assert.Empty(orden.ComponentesAfectados);
+        Assert.Null(orden.TrabajoRealizado);
         Assert.Null(orden.NotasInternas);
         var tecnico = api.Cliente(await api.RegistrarUsuarioAsync("tecnico@x.com", RolesDeSistema.TecnicoId));
 
@@ -59,12 +61,14 @@ public class DatosTecnicosEndpointTests(PostgresFixture postgres) : IClassFixtur
         var dto = (await respuesta.Content.ReadFromJsonAsync<OrdenReparacionDto>())!;
         Assert.Equal("Conector sulfatado", dto.Diagnostico);
         Assert.Equal(["Conector de carga", "IC de carga"], dto.ComponentesAfectados);
+        Assert.Equal("Cambio de conector de carga", dto.TrabajoRealizado);
 
         var guardada = (await admin.GetFromJsonAsync<OrdenReparacionDto>($"{Ruta}/{orden.Id}"))!;
         Assert.Equal("Carga con otro cable", guardada.Pruebas);
         Assert.Equal("Conector sulfatado", guardada.Diagnostico);
         Assert.Equal("0,2 A con 5 V", guardada.Mediciones);
         Assert.Equal(["Conector de carga", "IC de carga"], guardada.ComponentesAfectados);
+        Assert.Equal("Cambio de conector de carga", guardada.TrabajoRealizado);
         Assert.Equal("Cliente apurado", guardada.NotasInternas);
 
         var edicion = Assert.Single(await EdicionesAsync(admin, orden.Id));
@@ -74,6 +78,7 @@ public class DatosTecnicosEndpointTests(PostgresFixture postgres) : IClassFixtur
                 new CambioDeCampo("diagnostico", null, "Conector sulfatado"),
                 new CambioDeCampo("mediciones", null, "0,2 A con 5 V"),
                 new CambioDeCampo("componentes_afectados", null, "Conector de carga, IC de carga"),
+                new CambioDeCampo("trabajo_realizado", null, "Cambio de conector de carga"),
                 new CambioDeCampo("notas_internas", null, "Cliente apurado"),
             ],
             edicion.Cambios);
@@ -88,7 +93,12 @@ public class DatosTecnicosEndpointTests(PostgresFixture postgres) : IClassFixtur
         var orden = await OrdenAsync(admin);
         Assert.Equal(HttpStatusCode.OK, (await ActualizarAsync(admin, orden.Id, Datos)).StatusCode);
 
-        var respuesta = await ActualizarAsync(admin, orden.Id, Datos with { Diagnostico = "Conector roto", ComponentesAfectados = ["Conector de carga"] });
+        var respuesta = await ActualizarAsync(admin, orden.Id, Datos with
+        {
+            Diagnostico = "Conector roto",
+            ComponentesAfectados = ["Conector de carga"],
+            TrabajoRealizado = "Cambio de conector y limpieza",
+        });
 
         Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
         var ediciones = await EdicionesAsync(admin, orden.Id);
@@ -97,6 +107,7 @@ public class DatosTecnicosEndpointTests(PostgresFixture postgres) : IClassFixtur
             [
                 new CambioDeCampo("diagnostico", "Conector sulfatado", "Conector roto"),
                 new CambioDeCampo("componentes_afectados", "Conector de carga, IC de carga", "Conector de carga"),
+                new CambioDeCampo("trabajo_realizado", "Cambio de conector de carga", "Cambio de conector y limpieza"),
             ],
             ediciones[0].Cambios);
     }
@@ -124,11 +135,14 @@ public class DatosTecnicosEndpointTests(PostgresFixture postgres) : IClassFixtur
         var muchos = Enumerable.Range(1, OrdenReparacion.MaximoComponentesAfectados + 1).Select(i => $"Componente {i}").ToList();
 
         var textoLargo = await ActualizarAsync(admin, orden.Id, Datos with { NotasInternas = largo });
+        var trabajoLargo = await ActualizarAsync(admin, orden.Id, Datos with { TrabajoRealizado = largo });
         var demasiados = await ActualizarAsync(admin, orden.Id, Datos with { ComponentesAfectados = muchos });
         var inexistente = await ActualizarAsync(admin, Guid.NewGuid(), Datos);
 
         Assert.Equal(HttpStatusCode.BadRequest, textoLargo.StatusCode);
         Assert.Equal("datos_tecnicos_invalidos", await CodigoAsync(textoLargo));
+        Assert.Equal(HttpStatusCode.BadRequest, trabajoLargo.StatusCode);
+        Assert.Equal("datos_tecnicos_invalidos", await CodigoAsync(trabajoLargo));
         Assert.Equal(HttpStatusCode.BadRequest, demasiados.StatusCode);
         Assert.Equal("datos_tecnicos_invalidos", await CodigoAsync(demasiados));
         Assert.Equal(HttpStatusCode.NotFound, inexistente.StatusCode);
@@ -136,6 +150,7 @@ public class DatosTecnicosEndpointTests(PostgresFixture postgres) : IClassFixtur
 
         var sinCambios = (await admin.GetFromJsonAsync<OrdenReparacionDto>($"{Ruta}/{orden.Id}"))!;
         Assert.Null(sinCambios.Pruebas);
+        Assert.Null(sinCambios.TrabajoRealizado);
         Assert.Empty(sinCambios.ComponentesAfectados);
         Assert.Empty(await EdicionesAsync(admin, orden.Id));
     }

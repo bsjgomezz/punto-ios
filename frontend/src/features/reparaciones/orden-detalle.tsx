@@ -61,6 +61,7 @@ const NOMBRES_DE_CAMPO: Record<string, string> = {
   diagnostico: "Diagnóstico",
   mediciones: "Mediciones",
   componentes_afectados: "Componentes afectados",
+  trabajo_realizado: "Trabajo realizado",
   notas_internas: "Notas internas",
   version_presupuesto: "Versión del presupuesto",
   total_presupuesto: "Total del presupuesto",
@@ -119,6 +120,7 @@ type FormDatosTecnicos = {
   diagnostico: string;
   mediciones: string;
   componentesAfectados: string[];
+  trabajoRealizado: string;
   notasInternas: string;
 };
 
@@ -128,19 +130,21 @@ function formDeOrden(orden: Orden): FormDatosTecnicos {
     diagnostico: orden.diagnostico ?? "",
     mediciones: orden.mediciones ?? "",
     componentesAfectados: orden.componentesAfectados ?? [],
+    trabajoRealizado: orden.trabajoRealizado ?? "",
     notasInternas: orden.notasInternas ?? "",
   };
 }
 
 const textoONull = (texto: string) => (texto.trim() === "" ? null : texto);
 
-/** El backend reemplaza los cinco campos juntos: se mandan siempre todos, tal cual están en pantalla. */
+/** El backend reemplaza los seis campos juntos: se mandan siempre todos, tal cual están en pantalla. */
 function datosDelForm(form: FormDatosTecnicos): DatosTecnicos {
   return {
     pruebas: textoONull(form.pruebas),
     diagnostico: textoONull(form.diagnostico),
     mediciones: textoONull(form.mediciones),
     componentesAfectados: form.componentesAfectados,
+    trabajoRealizado: textoONull(form.trabajoRealizado),
     notasInternas: textoONull(form.notasInternas),
   };
 }
@@ -335,7 +339,7 @@ export function OrdenDetalle({ id }: { id: string }) {
     );
   }
 
-  function cambiarTextoTecnico(campo: "pruebas" | "diagnostico" | "mediciones" | "notasInternas", valor: string) {
+  function cambiarTextoTecnico(campo: "pruebas" | "diagnostico" | "mediciones" | "trabajoRealizado" | "notasInternas", valor: string) {
     setDatosTecnicos((actual) => (actual ? { ...actual, [campo]: valor } : actual));
   }
 
@@ -732,6 +736,16 @@ export function OrdenDetalle({ id }: { id: string }) {
                     Agregar
                   </button>
                 </div>
+              </div>
+              <div className="field">
+                <label htmlFor="dt-trabajo-realizado">Trabajo realizado</label>
+                <textarea
+                  id="dt-trabajo-realizado"
+                  rows={3}
+                  value={datosTecnicos.trabajoRealizado}
+                  disabled={guardandoDatosTecnicos}
+                  onChange={(e) => cambiarTextoTecnico("trabajoRealizado", e.target.value)}
+                />
               </div>
               <div className="field">
                 <label htmlFor="dt-notas">Notas internas</label>

@@ -100,6 +100,7 @@ export type Orden = {
   diagnostico: string | null;
   mediciones: string | null;
   componentesAfectados: string[];
+  trabajoRealizado: string | null;
   /** Privadas del taller: no las ve el cliente. */
   notasInternas: string | null;
   /** La versión de presupuesto de número más alto, o null si todavía no se presupuestó. */
@@ -112,6 +113,7 @@ export type DatosTecnicos = {
   diagnostico: string | null;
   mediciones: string | null;
   componentesAfectados: string[];
+  trabajoRealizado: string | null;
   notasInternas: string | null;
 };
 
@@ -171,7 +173,7 @@ export function cambiarEstadoDeOrden(token: string, ordenId: string, nuevoEstado
   return apiPost<Orden>(`/api/v1/reparaciones/${encodeURIComponent(ordenId)}/estado`, token, { nuevoEstado });
 }
 
-/** Reemplaza los datos técnicos de la orden: hay que mandar siempre los cinco campos (lo que no se manda se borra). */
+/** Reemplaza los datos técnicos de la orden: hay que mandar siempre los seis campos (lo que no se manda se borra). */
 export function actualizarDatosTecnicos(token: string, ordenId: string, datos: DatosTecnicos): Promise<Orden> {
   return apiPut<Orden>(`/api/v1/reparaciones/${encodeURIComponent(ordenId)}/datos-tecnicos`, token, datos);
 }

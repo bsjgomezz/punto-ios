@@ -77,6 +77,9 @@ public sealed class OrdenReparacion
     /// </summary>
     public List<string> ComponentesAfectados { get; private set; } = [];
 
+    /// <summary>Lo que se hizo para repararlo. Lo completa quien trabaja en la reparación.</summary>
+    public string? TrabajoRealizado { get; private set; }
+
     /// <summary>
     /// Notas privadas del taller. NUNCA se expone en el portal público de seguimiento del cliente (S18) ni en
     /// ningún otro DTO de cara al cliente — si en el futuro agregás un DTO público para una orden, no incluyas este campo.
@@ -205,11 +208,13 @@ public sealed class OrdenReparacion
         string? diagnostico,
         string? mediciones,
         List<string>? componentesAfectados,
+        string? trabajoRealizado,
         string? notasInternas)
     {
         var pruebasNuevas = TextoTecnico(pruebas, "Las pruebas admiten", nameof(pruebas));
         var diagnosticoNuevo = TextoTecnico(diagnostico, "El diagnóstico admite", nameof(diagnostico));
         var medicionesNuevas = TextoTecnico(mediciones, "Las mediciones admiten", nameof(mediciones));
+        var trabajoNuevo = TextoTecnico(trabajoRealizado, "El trabajo realizado admite", nameof(trabajoRealizado));
         var notasInternasNuevas = TextoTecnico(notasInternas, "Las notas internas admiten", nameof(notasInternas));
 
         var componentesNuevos = (componentesAfectados ?? [])
@@ -254,6 +259,12 @@ public sealed class OrdenReparacion
             cambios.Add(new CambioDeCampo(
                 "componentes_afectados", UnirComponentes(ComponentesAfectados), UnirComponentes(componentesNuevos)));
             ComponentesAfectados = componentesNuevos;
+        }
+
+        if (trabajoNuevo != TrabajoRealizado)
+        {
+            cambios.Add(new CambioDeCampo("trabajo_realizado", TrabajoRealizado, trabajoNuevo));
+            TrabajoRealizado = trabajoNuevo;
         }
 
         if (notasInternasNuevas != NotasInternas)

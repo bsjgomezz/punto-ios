@@ -39,6 +39,7 @@ internal sealed class OrdenReparacionConfiguration : IEntityTypeConfiguration<Or
         builder.Property(o => o.Diagnostico).HasColumnName("diagnostico").HasMaxLength(OrdenReparacion.LargoMaximoTextoTecnico);
         builder.Property(o => o.Mediciones).HasColumnName("mediciones").HasMaxLength(OrdenReparacion.LargoMaximoTextoTecnico);
         builder.Property(o => o.ComponentesAfectados).HasColumnName("componentes_afectados").IsRequired();
+        builder.Property(o => o.TrabajoRealizado).HasColumnName("trabajo_realizado").HasMaxLength(OrdenReparacion.LargoMaximoTextoTecnico);
         builder.Property(o => o.NotasInternas).HasColumnName("notas_internas").HasMaxLength(OrdenReparacion.LargoMaximoTextoTecnico);
         builder.OwnsMany(o => o.ChecklistItems, items => items.ToJson("checklist_ingreso"));
         builder.Ignore(o => o.TieneDesbloqueo);

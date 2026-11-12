@@ -1,17 +1,17 @@
-# Graph Report - Punto iOS  (2026-11-10)
+# Graph Report - Punto iOS  (2026-11-12)
 
 ## Corpus Check
-- 255 files · ~79,274 words
+- 257 files · ~82,878 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 8 file(s) not represented in the graph (top: (none) 5, .example 1, .ico 1)
 
 ## Summary
-- 2065 nodes · 6547 edges · 103 communities (74 shown, 29 thin omitted)
-- Extraction: 92% EXTRACTED · 8% INFERRED · 0% AMBIGUOUS · INFERRED: 527 edges (avg confidence: 0.84)
+- 2083 nodes · 6644 edges · 110 communities (74 shown, 36 thin omitted)
+- Extraction: 92% EXTRACTED · 8% INFERRED · 0% AMBIGUOUS · INFERRED: 533 edges (avg confidence: 0.84)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `7588f707`
+- Built from commit: `57b05a9b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -68,28 +68,28 @@
 - RegistroAuditoria
 - RelojFijo
 - HttpClient
-- ResponderPresupuestoHandlerTests
+- ReparacionesEndpointTests.cs
 - PuntoIOS.Domain.Auditoria
 - PuntoIOS.Domain.Reparaciones
 - devDependencies
-- IdentificarUsuarioHandler
+- PuntoIOS.Application.Common.Security
 - Guid
 - PuntoIOS.Application.Features.Identidad.ObtenerUsuarioActual
 - EntityTypeBuilder
 - login-form.tsx
-- RecibirEquipoHandler
+- IAuditoriaRepositorio
 - DatosTecnicosEndpointTests.OrdenAsync
 - CrearClienteHandlerTests
-- InlineData
+- ServiceCollectionExtensions.AddCasosDeUso
 - Usuario.Registrar
 - vitest
-- ObtenerUsuarioActualHandler
+- Task
 - CrearVersionPresupuestoHandlerTests
-- PageRequest
+- HttpClient
 - CurrentUser
 - RecibirEquipoHandler.HandleAsync
 - OrdenReparacionDto
-- microsoft_entityframeworkcore
+- equipos-cliente.tsx
 - Stream
 - CodigoSeguimiento.Generar
 - dependencies
@@ -101,49 +101,54 @@
 - DotEnv
 - useAuth
 - eslint.config.mjs
-- Permiso
+- DependencyInjection.AddInfrastructure
 - @testing-library/jest-dom
 - TiposDeReparacion.cs
-- IDirectorioDeUsuarios.ListarActivosConPermisoAsync
+- ActualizarClienteHandlerTests
 - ArgumentException
 - Theory
-- EmailValidator.cs
-- @types/react@^19
-- CrearClienteHandler.HandleAsync
+- OrdenReparacion.Recibir
+- IDirectorioDeUsuarios
+- Cliente
 - RecibirEquipoRequest
-- @types/react-dom@^19
-- reparaciones/api.ts
+- CambiarEstadoOrdenHandlerTests
+- Roles.Administrador
+- package.json
+- ListarOrdenesHandlerTests
+- CifradoConDataProtection
 - PermisoConfiguration
-- vitest.config.mts
+- IAuditoriaRepositorio.cs
+- UsuarioConfiguration
+- [codigo]/page.tsx
 
 ## God Nodes (most connected - your core abstractions)
-1. `OrdenReparacionDto` - 50 edges
-2. `PuntoIosDbContext` - 43 edges
-3. `OrdenReparacion` - 42 edges
-4. `OrdenDetalle()` - 42 edges
-5. `Usuario` - 39 edges
-6. `VersionDePresupuesto` - 39 edges
-7. `PuntoIOS.Domain.Auditoria` - 36 edges
-8. `PuntoIOS.Domain.Identidad` - 34 edges
+1. `OrdenReparacionDto` - 52 edges
+2. `OrdenDetalle()` - 44 edges
+3. `PuntoIosDbContext` - 42 edges
+4. `VersionDePresupuesto` - 41 edges
+5. `OrdenReparacion` - 41 edges
+6. `Usuario` - 39 edges
+7. `PuntoIOS.Domain.Identidad` - 38 edges
+8. `PuntoIOS.Domain.Auditoria` - 36 edges
 9. `ReparacionesController` - 32 edges
 10. `Cliente` - 31 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `TestApi` --references--> `Program`  [EXTRACTED]
   backend/tests/PuntoIOS.IntegrationTests/TestApi.cs → backend/src/PuntoIOS.Api/Program.cs
+- `ReparacionesController` --references--> `CambiarEstadoOrdenHandler`  [EXTRACTED]
+  backend/src/PuntoIOS.Api/Controllers/ReparacionesController.cs → backend/src/PuntoIOS.Application/Features/Reparaciones/CambiarEstado/CambiarEstadoOrdenHandler.cs
 - `ReparacionesController` --references--> `ListarVersionesPresupuestoHandler`  [EXTRACTED]
   backend/src/PuntoIOS.Api/Controllers/ReparacionesController.cs → backend/src/PuntoIOS.Application/Features/Reparaciones/ListarVersionesPresupuesto/ListarVersionesPresupuestoHandler.cs
-- `AutorizacionTests` --references--> `PostgresFixture`  [EXTRACTED]
-  backend/tests/PuntoIOS.IntegrationTests/AutorizacionTests.cs → backend/tests/PuntoIOS.IntegrationTests/PostgresFixture.cs
-- `MeEndpointTests` --references--> `PostgresFixture`  [EXTRACTED]
-  backend/tests/PuntoIOS.IntegrationTests/MeEndpointTests.cs → backend/tests/PuntoIOS.IntegrationTests/PostgresFixture.cs
-- `UsuariosController` --references--> `ActualizarUsuarioHandler`  [EXTRACTED]
-  backend/src/PuntoIOS.Api/Controllers/UsuariosController.cs → backend/src/PuntoIOS.Application/Features/Identidad/ActualizarUsuario/ActualizarUsuarioHandler.cs
+- `ReparacionesController` --references--> `ResponderPresupuestoHandler`  [EXTRACTED]
+  backend/src/PuntoIOS.Api/Controllers/ReparacionesController.cs → backend/src/PuntoIOS.Application/Features/Reparaciones/ResponderPresupuesto/ResponderPresupuestoHandler.cs
+- `RegistroHistorialDto` --references--> `CambioDeCampo`  [EXTRACTED]
+  backend/src/PuntoIOS.Application/Features/Auditoria/HistorialDeAuditoria.cs → backend/src/PuntoIOS.Domain/Auditoria/RegistroAuditoria.cs
 
 ## Import Cycles
 - None detected.
 
-## Communities (103 total, 29 thin omitted)
+## Communities (110 total, 36 thin omitted)
 
 ### Community 0 - "Punto iOS — Software Design Document (SDD)"
 Cohesion: 0.09
@@ -158,11 +163,11 @@ Cohesion: 0.10
 Nodes (20): 1. Ciclo de cada slice, 2. Hitos de uso real, 3. Fases, 4. Flujos E2E mínimos (Playwright), 5. Definition of Done, 6. Estrategia Git, Fase 10 — Accesorios, repuestos e inventario, Fase 11 — Finanzas → Hito C (+12 more)
 
 ### Community 4 - "ChecklistYFotosTests"
-Cohesion: 0.21
-Nodes (5): RecibirEquipoCommand, ChecklistIngreso, ItemChecklist, ItemsDeChecklist, ChecklistYFotosTests
+Cohesion: 0.24
+Nodes (4): FormatoDeImagen, ChecklistIngreso, ItemChecklist, ChecklistYFotosTests
 
 ### Community 5 - "Dispositivo"
-Cohesion: 0.12
+Cohesion: 0.11
 Nodes (14): Dispositivo, Almacenamiento, ClienteId, Color, CreadoEn, CreadoPorUsuarioId, Id, ImeiSerie (+6 more)
 
 ### Community 6 - "use-remote-checks.ts"
@@ -170,8 +175,8 @@ Cohesion: 0.15
 Nodes (14): Home(), REMOTE_CHECKS, RemoteCheckId, Row, RowState, StatusBoard(), subscribeToConnection(), useOnline() (+6 more)
 
 ### Community 7 - "RecibirEquipoHandlerTests"
-Cohesion: 0.12
-Nodes (9): ICifradoDeDatos, DesbloqueoDto, LocalFijo, LocalId, UsuarioFijo, CifradoDePrueba, SeguimientoClienteHandlersTests, RecibirEquipoHandlerTests (+1 more)
+Cohesion: 0.15
+Nodes (8): ICifradoDeDatos, RecibirEquipoCommand, DesbloqueoDto, AuditoriaRepoEnMemoria, Registros, CifradoDePrueba, RecibirEquipoHandlerTests, Invalidos
 
 ### Community 8 - "Instrucciones para Codex / Claude Code — Punto iOS"
 Cohesion: 0.50
@@ -198,48 +203,48 @@ Cohesion: 0.20
 Nodes (9): ASPNETCORE_ENVIRONMENT, applicationUrl, commandName, dotnetRunMessages, environmentVariables, launchBrowser, profiles, http (+1 more)
 
 ### Community 15 - "Usuario"
-Cohesion: 0.08
-Nodes (21): ActualizarUsuarioHandler, IdentificarUsuarioHandler, IRolRepositorio, IUsuarioRepositorio, Usuario, Activo, CreadoEn, Email (+13 more)
+Cohesion: 0.10
+Nodes (17): IdentificarUsuarioHandler, IUsuarioRepositorio, Usuario, Activo, CreadoEn, Email, FirebaseUid, Id (+9 more)
 
 ### Community 16 - "PuntoIosDbContext"
 Cohesion: 0.11
 Nodes (15): DesignTimeDbContextFactory, InicializadorBaseDeDatos, PuntoIosDbContext, Auditoria, Clientes, Dispositivos, FotosOrden, LocalActualId (+7 more)
 
 ### Community 19 - "ServiceCollectionExtensions.cs"
-Cohesion: 0.07
-Nodes (5): ResponderPresupuestoRequest, PuntoIOS.Application.Features.Reparaciones.ListarVersionesPresupuesto, PuntoIOS.Application.Features.Reparaciones.ResponderPresupuesto, PuntoIOS.Api.Seguridad, PuntoIOS.Application.Features.Clientes.SeguimientoCliente
+Cohesion: 0.08
+Nodes (4): PuntoIOS.Application.Features.Reparaciones.ListarVersionesPresupuesto, PuntoIOS.Application.Features.Reparaciones.ResponderPresupuesto, PuntoIOS.Application.Features.Reparaciones.CambiarEstado, PuntoIOS.Api.Seguridad
 
 ### Community 20 - "auth-provider.tsx"
 Cohesion: 0.17
 Nodes (12): body, display, metadata, RootLayout(), viewport, AuthContext, AuthContextValue, AuthProvider() (+4 more)
 
 ### Community 22 - "seguimiento-cliente.tsx"
-Cohesion: 0.19
-Nodes (19): formatoFecha, Props, SeguimientoCliente(), conToken(), enviarPorWhatsapp(), generar(), ver(), ana (+11 more)
+Cohesion: 0.18
+Nodes (20): formatoFecha, Props, SeguimientoCliente(), conToken(), enviarPorWhatsapp(), generar(), ver(), ana (+12 more)
 
 ### Community 23 - "TestApi.cs"
-Cohesion: 0.11
-Nodes (15): ListarUsuariosHandler, Permisos, RolesDeSistema, PuntoIOS.Application.Common.Results, PuntoIOS.Api.Controllers, PuntoIOS.IntegrationTests, PuntoIOS.UnitTests.Identidad, PuntoIOS.Application.Features.Identidad.ActualizarUsuario (+7 more)
+Cohesion: 0.07
+Nodes (21): RolesController, BuscarClientesHandler, ObtenerClienteHandler, ListarRolesHandler, Permiso, Codigo, Descripcion, Permisos (+13 more)
 
-### Community 26 - "CambiarEstadoOrdenHandlerTests"
-Cohesion: 0.24
-Nodes (4): ActualizarDatosTecnicosCommand, CambiarEstadoOrdenCommand, CambiarEstadoOrdenHandlerTests, ActualizarDatosTecnicosHandlerTests
+### Community 24 - "PagedResult"
+Cohesion: 0.22
+Nodes (4): HistorialDeAuditoria, RegistroHistorialDto, ListarUsuariosHandler, OrdenResumenDto
 
 ### Community 27 - "Resultado"
 Cohesion: 0.17
 Nodes (10): ResultadoExtensions, Error, Resultado, Error, EsExitoso, Valor, TipoError, Conflicto (+2 more)
 
 ### Community 29 - "clientes/api.ts"
-Cohesion: 0.07
-Nodes (46): actualizarCliente(), Cliente, Coincidencia, crearCliente(), DatosCliente, EquipoNuevo, NuevoCliente, Pagina (+38 more)
+Cohesion: 0.09
+Nodes (36): CambioDeCampo, Cliente, Coincidencia, crearCliente(), DatosCliente, EquipoNuevo, NuevoCliente, Pagina (+28 more)
 
 ### Community 30 - "TestApi.cs"
-Cohesion: 0.09
-Nodes (4): Program, AssemblyMarker, PuntoIOS.Infrastructure, PuntoIOS.Api.Extensions
+Cohesion: 0.06
+Nodes (9): FirebaseClaims, HttpContextCurrentUserAccessor, UsuarioLocalClaims, Program, AssemblyMarker, PuntoIOS.Application.Features.Identidad.IdentificarUsuario, PuntoIOS.Infrastructure, PuntoIOS.Api.Authentication (+1 more)
 
 ### Community 31 - "Rol"
-Cohesion: 0.11
-Nodes (11): Rol, Descripcion, EsDeSistema, Id, Nombre, Permisos, RolPermiso, PermisoCodigo (+3 more)
+Cohesion: 0.15
+Nodes (9): Rol, Descripcion, EsDeSistema, Id, Nombre, Permisos, RolPermiso, PermisoCodigo (+1 more)
 
 ### Community 32 - "DispositivoDto"
 Cohesion: 0.26
@@ -247,26 +252,26 @@ Nodes (7): CrearClienteRequest, EquipoNuevoRequest, ActualizarDispositivoRequest
 
 ### Community 33 - "OrdenRepoEnMemoria"
 Cohesion: 0.11
-Nodes (9): FiltroDeOrdenes, FotoOrdenConfiguration, OrdenReparacionRepositorio, OrdenRepoEnMemoria, Fotos, Guardados, Ordenes, VersionesPresupuesto (+1 more)
+Nodes (10): ListarFotosHandler, IOrdenReparacionRepositorio, FotoOrdenConfiguration, OrdenReparacionConfiguration, OrdenReparacionRepositorio, OrdenRepoEnMemoria, Fotos, Guardados (+2 more)
 
 ### Community 34 - "VersionDePresupuesto"
-Cohesion: 0.13
-Nodes (12): VersionDePresupuesto, CreadoEn, CreadoPorUsuarioId, Id, Items, LocalId, Numero, OrdenId (+4 more)
+Cohesion: 0.11
+Nodes (15): ResponderPresupuestoCommand, VersionDePresupuesto, CreadoEn, CreadoPorUsuarioId, Id, Items, LocalId, Numero (+7 more)
 
 ### Community 35 - "TestApi.CrearAsync"
-Cohesion: 0.15
-Nodes (4): RegistrarUsuarioRequest, MeEndpointTests, SeguimientoClienteEndpointTests, UsuariosEndpointTests
+Cohesion: 0.12
+Nodes (5): ActualizarUsuarioRequest, RegistrarUsuarioRequest, MeEndpointTests, SeguimientoClienteEndpointTests, UsuariosEndpointTests
 
 ### Community 36 - "reparaciones/api.ts"
-Cohesion: 0.07
-Nodes (44): CambioDeCampo, actualizarDatosTecnicos(), cambiarEstadoDeOrden(), crearVersionPresupuesto(), DatosTecnicos, formatearMonto(), Foto, ItemPresupuesto (+36 more)
+Cohesion: 0.06
+Nodes (70): Dispositivo, actualizarDatosTecnicos(), AVISO_FECHA_ESTIMADA, cambiarEstadoDeOrden(), Checklist, CHECKLIST_CATALOGO, crearVersionPresupuesto(), DatosTecnicos (+62 more)
 
 ### Community 37 - "IdentificarUsuarioHandler.cs"
-Cohesion: 0.28
+Cohesion: 0.24
 Nodes (8): EstadoIdentificacion, Autorizado, Desactivado, NoRegistrado, ResultadoIdentificacion, Desactivado, NoRegistrado, UsuarioAutorizado
 
 ### Community 38 - "Dispositivo"
-Cohesion: 0.19
+Cohesion: 0.21
 Nodes (4): DispositivoRepositorio, DispositivoRepoEnMemoria, Dispositivos, Guardados
 
 ### Community 41 - "LocalUnico"
@@ -275,127 +280,127 @@ Nodes (10): ILocalActual, LocalId, Local, Id, Nombre, LocalesDeSistema, LocalUni
 
 ### Community 42 - "DateTimeOffset"
 Cohesion: 0.06
-Nodes (22): OrdenResumenDto, FotoOrden, CreadoEn, CreadoPorUsuarioId, Id, LocalId, OrdenId, Ruta (+14 more)
+Nodes (23): FotoOrden, CreadoEn, CreadoPorUsuarioId, Id, LocalId, OrdenId, Ruta, Tamano (+15 more)
 
 ### Community 43 - "OrdenReparacion"
 Cohesion: 0.07
 Nodes (26): OrdenReparacion, ChecklistItems, ClienteId, ComponentesAfectados, CreadoEn, CreadoPorUsuarioId, DesbloqueoCifrado, DesbloqueoTipo (+18 more)
 
 ### Community 44 - "Cliente"
-Cohesion: 0.10
-Nodes (18): ActualizarClienteCommand, Cliente, Apellido, CodigoSeguimientoCifrado, CodigoSeguimientoGeneradoEn, CodigoSeguimientoHuella, CreadoEn, CreadoPorUsuarioId (+10 more)
+Cohesion: 0.11
+Nodes (16): Cliente, Apellido, CodigoSeguimientoCifrado, CodigoSeguimientoGeneradoEn, CodigoSeguimientoHuella, CreadoEn, CreadoPorUsuarioId, Direccion (+8 more)
 
 ### Community 45 - "cliente-detalle.tsx"
 Cohesion: 0.12
-Nodes (15): IngresarPage(), BackLink(), historialDeCliente(), obtenerCliente(), RegistroHistorial, ACCIONES, ClienteDetalle(), Datos (+7 more)
+Nodes (16): ClienteRoute(), Detalle(), actualizarCliente(), historialDeCliente(), obtenerCliente(), RegistroHistorial, ACCIONES, ClienteDetalle() (+8 more)
 
 ### Community 46 - "DispositivosController.cs"
-Cohesion: 0.19
-Nodes (9): HistorialDeAuditoria, PuntoIOS.Application.Features.Dispositivos.HistorialDispositivo, PuntoIOS.Application.Features.Dispositivos.CrearDispositivo, PuntoIOS.Application.Features.Dispositivos, PuntoIOS.Application.Features.Dispositivos.ActualizarDispositivo, PuntoIOS.Application.Features.Dispositivos.ListarDispositivos, PuntoIOS.Application.Features.Dispositivos.RevelarImei, PuntoIOS.Application.Features.Auditoria (+1 more)
+Cohesion: 0.36
+Nodes (6): PuntoIOS.Application.Features.Dispositivos.HistorialDispositivo, PuntoIOS.Application.Features.Dispositivos.CrearDispositivo, PuntoIOS.Application.Features.Dispositivos.ActualizarDispositivo, PuntoIOS.Application.Features.Dispositivos.ListarDispositivos, PuntoIOS.Application.Features.Dispositivos.RevelarImei, PuntoIOS.Application.Features.Dispositivos.ObtenerDispositivo
 
 ### Community 47 - "Guid"
-Cohesion: 0.15
-Nodes (7): RegistroHistorialDto, IAuditoriaRepositorio, ListarRolesHandler, UsuarioActualDto, RolDto, VersionDePresupuestoDto, DirectorioFijo
+Cohesion: 0.12
+Nodes (6): IDirectorioDeUsuarios, UsuarioResumen, RolDto, FotoDto, DirectorioDeUsuarios, DirectorioFijo
 
 ### Community 48 - "List"
-Cohesion: 0.41
-Nodes (4): CrearVersionPresupuestoRequest, ItemPresupuestoRequest, ItemPresupuestoDto, PresupuestoEndpointTests
+Cohesion: 0.37
+Nodes (5): CrearVersionPresupuestoRequest, ItemPresupuestoRequest, ItemPresupuestoDto, VersionDePresupuestoDto, PresupuestoEndpointTests
 
 ### Community 50 - "RegistroAuditoria"
-Cohesion: 0.12
-Nodes (15): AccionesAuditadas, EntidadesAuditadas, RegistroAuditoria, Accion, Cambios, Entidad, EntidadId, Fecha (+7 more)
+Cohesion: 0.13
+Nodes (13): AccionesAuditadas, EntidadesAuditadas, RegistroAuditoria, Accion, Cambios, Entidad, EntidadId, Fecha (+5 more)
 
 ### Community 51 - "RelojFijo"
-Cohesion: 0.30
-Nodes (5): ActualizarDispositivoCommand, CrearDispositivoCommand, DispositivoHandlersTests, RelojFijo, Ahora
+Cohesion: 0.21
+Nodes (8): ActualizarDispositivoCommand, CrearDispositivoCommand, DispositivoHandlersTests, LocalFijo, LocalId, UsuarioFijo, RelojFijo, Ahora
+
+### Community 53 - "ReparacionesEndpointTests.cs"
+Cohesion: 0.15
+Nodes (7): PuntoIOS.Api.Controllers, PuntoIOS.IntegrationTests, PuntoIOS.Application.Features.Dispositivos, PuntoIOS.Application.Features.Identidad.ObtenerUsuarioActual, PuntoIOS.Application.Features.Clientes, PuntoIOS.Application.Features.Reparaciones, PuntoIOS.Application.Features.Clientes.SeguimientoCliente
 
 ### Community 54 - "PuntoIOS.Domain.Auditoria"
-Cohesion: 0.15
-Nodes (10): PuntoIOS.Application.Features.Reparaciones.Puertos, PuntoIOS.Application.Features.Clientes.ActualizarCliente, PuntoIOS.Application.Common.Archivos, PuntoIOS.Application.Features.Dispositivos.Puertos, PuntoIOS.Application.Features.Clientes, PuntoIOS.Application.Features.Auditoria.Puertos, PuntoIOS.Application.Features.Clientes.HistorialCliente, PuntoIOS.Domain.Clientes (+2 more)
+Cohesion: 0.20
+Nodes (6): PuntoIOS.Application.Features.Reparaciones.Puertos, PuntoIOS.Application.Common.Archivos, PuntoIOS.Application.Features.Dispositivos.Puertos, PuntoIOS.Application.Features.Auditoria, PuntoIOS.Infrastructure.Archivos, PuntoIOS.Domain.Auditoria
 
 ### Community 55 - "PuntoIOS.Domain.Reparaciones"
-Cohesion: 0.12
-Nodes (11): PuntoIOS.Application.Features.Reparaciones.CrearVersionPresupuesto, PuntoIOS.UnitTests.Clientes, PuntoIOS.Application.Features.Reparaciones.ConsultarOrdenes, PuntoIOS.Application.Features.Reparaciones.VerDesbloqueo, PuntoIOS.Application.Features.Reparaciones.RecibirEquipo, PuntoIOS.Application.Features.Reparaciones.ActualizarDatosTecnicos, PuntoIOS.Application.Features.Reparaciones.CambiarEstado, PuntoIOS.Application.Features.Clientes.CrearCliente (+3 more)
+Cohesion: 0.09
+Nodes (14): PuntoIOS.Application.Features.Reparaciones.CrearVersionPresupuesto, PuntoIOS.Infrastructure.Persistence.Configurations, PuntoIOS.UnitTests.Clientes, PuntoIOS.Application.Features.Clientes.ActualizarCliente, PuntoIOS.Application.Features.Reparaciones.ConsultarOrdenes, PuntoIOS.Application.Features.Reparaciones.VerDesbloqueo, PuntoIOS.Application.Features.Reparaciones.RecibirEquipo, PuntoIOS.Application.Features.Reparaciones.ActualizarDatosTecnicos (+6 more)
 
 ### Community 56 - "devDependencies"
 Cohesion: 0.15
-Nodes (13): devDependencies, jsdom@^30.1.3, tailwindcss@^4, @tailwindcss/turbopack@^4, @testing-library/react@^16.3.3, @types/node@^24.19.2, typescript@^5, vitest@^5.1.0 (+5 more)
-
-### Community 57 - "IdentificarUsuarioHandler"
-Cohesion: 0.11
-Nodes (7): FirebaseClaims, HttpContextCurrentUserAccessor, UsuarioLocalClaims, ICurrentUserAccessor, PuntoIOS.Application.Features.Identidad.IdentificarUsuario, PuntoIOS.Application.Common.Security, PuntoIOS.Api.Authentication
+Nodes (13): devDependencies, @tailwindcss/turbopack@^4, @testing-library/react@^16.3.3, @types/react@^19, @types/react-dom@^19, typescript@^5, @vitejs/plugin-react@^6.2.1, vitest@^5.1.0 (+5 more)
 
 ### Community 58 - "Guid"
-Cohesion: 0.05
-Nodes (14): ClientesController, DispositivosController, MeController, ReparacionesController, TipoReparacionDto, RolesController, UsuariosController, ServiceCollectionExtensions (+6 more)
+Cohesion: 0.11
+Nodes (11): ClientesController, DispositivosController, MeController, ReparacionesController, TipoReparacionDto, UsuariosController, ClienteDto, CrearClienteCommand (+3 more)
 
 ### Community 59 - "PuntoIOS.Application.Features.Identidad.ObtenerUsuarioActual"
-Cohesion: 0.16
-Nodes (6): PagedResult, TotalPages, PagedResultTests, PuntoIOS.Application.Common.Pagination, PuntoIOS.UnitTests, PuntoIOS.Application.Features.Identidad.ObtenerUsuarioActual
+Cohesion: 0.13
+Nodes (10): PagedResult, TotalPages, PageRequest, Page, PageSize, Skip, PagedResultTests, PageRequestTests (+2 more)
 
 ### Community 60 - "EntityTypeBuilder"
-Cohesion: 0.23
-Nodes (6): ClienteConfiguration, DispositivoConfiguration, LocalConfiguration, UsuarioConfiguration, OrdenReparacionConfiguration, VersionDePresupuestoConfiguration
+Cohesion: 0.31
+Nodes (4): ClienteConfiguration, DispositivoConfiguration, LocalConfiguration, VersionDePresupuestoConfiguration
 
 ### Community 61 - "login-form.tsx"
 Cohesion: 0.19
 Nodes (12): OjoAbierto(), OjoCerrado(), PasswordInput(), Props, describeAuthError(), LoginForm(), onGoogle(), onSubmit() (+4 more)
 
-### Community 62 - "RecibirEquipoHandler"
-Cohesion: 0.09
-Nodes (29): CifradoConDataProtection, ActualizarClienteHandler, CrearClienteHandler, HistorialClienteHandler, ConsultarCodigoSeguimientoHandler, GenerarCodigoSeguimientoHandler, ActualizarDispositivoHandler, CrearDispositivoHandler (+21 more)
+### Community 62 - "IAuditoriaRepositorio"
+Cohesion: 0.35
+Nodes (13): ActualizarClienteHandler, CrearClienteHandler, HistorialClienteHandler, ConsultarCodigoSeguimientoHandler, GenerarCodigoSeguimientoHandler, ActualizarDispositivoHandler, CrearDispositivoHandler, RevelarImeiHandler (+5 more)
 
 ### Community 66 - "Usuario.Registrar"
-Cohesion: 0.33
+Cohesion: 0.28
 Nodes (3): ActualizarUsuarioCommand, RegistrarUsuarioCommand, GestionDeUsuariosTests
 
 ### Community 67 - "vitest"
-Cohesion: 0.08
-Nodes (21): mocks, mocks, ana, Handler, mocks, ana, iphone, json() (+13 more)
+Cohesion: 0.06
+Nodes (22): mocks, ana, Handler, mocks, hoy(), NuevaOrdenForm(), ana, iphone (+14 more)
 
-### Community 68 - "ObtenerUsuarioActualHandler"
-Cohesion: 0.54
-Nodes (3): ObtenerUsuarioActualHandler, FakeAccessor, ObtenerUsuarioActualHandlerTests
+### Community 68 - "Task"
+Cohesion: 0.17
+Nodes (5): ActualizarUsuarioHandler, IRolRepositorio, UsuarioDto, RolRepositorio, RolRepositorioEnMemoria
 
 ### Community 69 - "CrearVersionPresupuestoHandlerTests"
 Cohesion: 0.46
 Nodes (3): CrearVersionPresupuestoCommand, ItemPresupuestoInput, CrearVersionPresupuestoHandlerTests
 
-### Community 70 - "PageRequest"
-Cohesion: 0.29
-Nodes (5): PageRequest, Page, PageSize, Skip, PageRequestTests
+### Community 71 - "CurrentUser"
+Cohesion: 0.25
+Nodes (5): CurrentUser, ObtenerUsuarioActualHandler, IdentificarUsuarioHandlerTests, FakeAccessor, ObtenerUsuarioActualHandlerTests
 
 ### Community 72 - "RecibirEquipoHandler.HandleAsync"
-Cohesion: 0.17
-Nodes (4): ClienteResumenDto, DispositivoValidacion, ArmadorDeOrdenes, CambioDeCampo
+Cohesion: 0.14
+Nodes (7): ClienteResumenDto, DispositivoValidacion, ListarDispositivosHandler, ObtenerDispositivoHandler, IDispositivoRepositorio, ArmadorDeOrdenes, CambioDeCampo
 
 ### Community 73 - "OrdenReparacionDto"
-Cohesion: 0.21
-Nodes (5): CambiarEstadoRequest, ChecklistDto, OrdenReparacionDto, CambiarEstadoEndpointTests, ResponderPresupuestoEndpointTests
+Cohesion: 0.37
+Nodes (4): ResponderPresupuestoRequest, ChecklistDto, OrdenReparacionDto, ResponderPresupuestoEndpointTests
 
-### Community 74 - "microsoft_entityframeworkcore"
-Cohesion: 0.14
-Nodes (6): BuscarClientesHandler, PuntoIOS.Infrastructure.Persistence.Configurations, PuntoIOS.Application.Features.Clientes.Puertos, PuntoIOS.Application.Features.Clientes.BuscarClientes, PuntoIOS.Infrastructure.Persistence, PuntoIOS.Application.Features.Clientes.ObtenerCliente
+### Community 74 - "equipos-cliente.tsx"
+Cohesion: 0.17
+Nodes (9): listarDispositivos(), revelarImei(), EquiposCliente(), verImei(), Lista, Props, iphone, mocks (+1 more)
 
 ### Community 75 - "Stream"
-Cohesion: 0.20
+Cohesion: 0.19
 Nodes (6): IAlmacenDeArchivos, ArchivoDeFoto, ObtenerFotoHandler, AlmacenEnDisco, AlmacenEnMemoria, Archivos
 
 ### Community 76 - "CodigoSeguimiento.Generar"
-Cohesion: 0.18
-Nodes (3): FormatoDeImagen, CodigoSeguimiento, CodigoSeguimientoTests
+Cohesion: 0.16
+Nodes (3): CodigoSeguimiento, CodigoSeguimientoTests, SeguimientoClienteHandlersTests
 
 ### Community 77 - "dependencies"
-Cohesion: 0.22
-Nodes (10): dependencies, firebase@^13.2.0, next@16.4.5, react@19.3.0, react-dom@19.3.0, name, private, version (+2 more)
+Cohesion: 0.29
+Nodes (7): dependencies, firebase@^13.2.0, next@16.4.5, react@19.3.0, react-dom@19.3.0, firebase, react-dom
 
 ### Community 78 - "scripts"
 Cohesion: 0.25
 Nodes (8): scripts, build, dev, lint, start, test, test:e2e, typecheck
 
 ### Community 79 - "orden-detalle.test.tsx"
-Cohesion: 0.38
-Nodes (9): json(), me(), mocks, orden, PERMISOS_ESTADO, stubApi(), stubCambioDeEstado(), stubDatosTecnicos() (+1 more)
+Cohesion: 0.36
+Nodes (10): json(), me(), mocks, orden, PERMISOS_ESTADO, stubApi(), stubCambioDeEstado(), stubDatosTecnicos() (+2 more)
 
 ### Community 81 - "@playwright/test"
 Cohesion: 0.29
@@ -406,60 +411,60 @@ Cohesion: 0.40
 Nodes (4): Recent commits, Resume, Session state (auto-saved — last known reality), Uncommitted changes
 
 ### Community 84 - "useAuth"
-Cohesion: 0.08
-Nodes (36): nextConfig, ClienteRoute(), Detalle(), ClientesRoute(), PanelPage(), Detalle(), OrdenRoute(), ReparacionesRoute() (+28 more)
+Cohesion: 0.09
+Nodes (33): nextConfig, ClientesRoute(), IngresarPage(), PanelPage(), Detalle(), OrdenRoute(), ReparacionesRoute(), BackLink() (+25 more)
 
 ### Community 86 - "eslint.config.mjs"
 Cohesion: 0.33
 Nodes (5): eslintConfig, eslint@^9, eslint-config-next@16.4.5, eslint, eslint-config-next
 
-### Community 88 - "Permiso"
-Cohesion: 0.50
-Nodes (3): Permiso, Codigo, Descripcion
-
 ### Community 90 - "TiposDeReparacion.cs"
 Cohesion: 0.29
 Nodes (3): EstadosDeReparacion, TiposDeDesbloqueo, TiposDeReparacion
-
-### Community 91 - "IDirectorioDeUsuarios.ListarActivosConPermisoAsync"
-Cohesion: 0.53
-Nodes (3): IDirectorioDeUsuarios, UsuarioResumen, DirectorioDeUsuarios
 
 ### Community 92 - "ArgumentException"
 Cohesion: 0.22
 Nodes (4): ItemDePresupuesto, TiposDeItemPresupuesto, VersionDePresupuestoTests, ItemsInvalidos
 
-### Community 96 - "CrearClienteHandler.HandleAsync"
-Cohesion: 0.14
-Nodes (7): ClienteValidacion, ObtenerClienteHandler, IClienteRepositorio, ClienteRepositorio, ClienteRepoEnMemoria, Clientes, Guardados
+### Community 94 - "OrdenReparacion.Recibir"
+Cohesion: 0.15
+Nodes (4): EmailValidator, ClienteValidacion, ItemsDeChecklist, PuntoIOS.Application.Common.Validation
+
+### Community 95 - "IDirectorioDeUsuarios"
+Cohesion: 0.27
+Nodes (8): HistorialDispositivoHandler, CambiarEstadoOrdenHandler, HistorialOrdenHandler, ListarOrdenesHandler, ListarTecnicosHandler, ObtenerOrdenHandler, ListarVersionesPresupuestoHandler, ResponderPresupuestoHandler
+
+### Community 96 - "Cliente"
+Cohesion: 0.18
+Nodes (5): IClienteRepositorio, ClienteRepositorio, ClienteRepoEnMemoria, Clientes, Guardados
 
 ### Community 97 - "RecibirEquipoRequest"
 Cohesion: 0.40
 Nodes (3): ChecklistRequest, RecibirEquipoRequest, ChecklistYFotosEndpointTests
 
-### Community 102 - "reparaciones/api.ts"
-Cohesion: 0.12
-Nodes (23): Dispositivo, AVISO_FECHA_ESTIMADA, Checklist, CHECKLIST_CATALOGO, ESTADOS, ITEM_ENCIENDE, listarTecnicos(), NOMBRES_DESBLOQUEO (+15 more)
+### Community 100 - "package.json"
+Cohesion: 0.20
+Nodes (9): jsdom@^30.1.3, tailwindcss@^4, @types/node@^24.19.2, name, private, version, jsdom, tailwindcss (+1 more)
 
 ## Knowledge Gaps
-- **182 isolated node(s):** `Microsoft.EntityFrameworkCore.Design (10.0.14)`, `Microsoft.EntityFrameworkCore.Design (10.0.14)`, `coverlet.collector (6.0.4)`, `Microsoft.NET.Test.Sdk (17.14.1)`, `xunit (2.9.3)` (+177 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 523 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **29 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **182 isolated node(s):** `Id`, `LocalId`, `Entidad`, `EntidadId`, `Accion` (+177 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 527 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **36 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `OrdenReparacion` connect `OrdenReparacion` to `OrdenRepoEnMemoria`, `MaquinaDeEstadosTests`, `DateTimeOffset`, `Guid`, `List`, `PuntoIOS.Domain.Reparaciones`, `Fact`, `CambiarEstadoOrdenHandlerTests`?**
+- **Why does `OrdenReparacion` connect `OrdenReparacion` to `MaquinaDeEstadosTests`, `DateTimeOffset`, `Guid`, `List`, `ReparacionesEndpointTests.cs`, `Fact`, `CambiarEstadoOrdenHandlerTests`, `OrdenReparacion.Recibir`?**
   _High betweenness centrality (0.033) - this node is a cross-community bridge._
-- **What connects `Microsoft.EntityFrameworkCore.Design (10.0.14)`, `Microsoft.EntityFrameworkCore.Design (10.0.14)`, `coverlet.collector (6.0.4)` to the rest of the system?**
+- **What connects `Id`, `LocalId`, `Entidad` to the rest of the system?**
   _182 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Punto iOS — Software Design Document (SDD)` be split into smaller, more focused modules?**
   _Cohesion score 0.09090909090909091 - nodes in this community are weakly interconnected._
-- **Why does `Usuario` connect `Usuario` to `Usuario.Registrar`, `CurrentUser`, `DateTimeOffset`, `Guid`, `PagedResult`, `Rol`?**
-  _High betweenness centrality (0.020) - this node is a cross-community bridge._
+- **Why does `PuntoIosDbContext` connect `PuntoIosDbContext` to `Cliente`, `OrdenRepoEnMemoria`, `VersionDePresupuesto`, `Task`, `Dispositivo`, `PermisoConfiguration`, `UsuarioConfiguration`, `Guid`, `RolConfiguration`, `Usuario`, `RegistroAuditoria`, `HttpClient`, `PuntoIOS.Domain.Reparaciones`, `DependencyInjection.AddInfrastructure`, `EntityTypeBuilder`, `IAuditoriaRepositorio`?**
+  _High betweenness centrality (0.032) - this node is a cross-community bridge._
 - **Should `PuntoIOS.ArchitectureTests.csproj` be split into smaller, more focused modules?**
   _Cohesion score 0.059800664451827246 - nodes in this community are weakly interconnected._
-- **Why does `PuntoIosDbContext` connect `PuntoIosDbContext` to `CrearClienteHandler.HandleAsync`, `OrdenRepoEnMemoria`, `VersionDePresupuesto`, `Dispositivo`, `PermisoConfiguration`, `microsoft_entityframeworkcore`, `DateTimeOffset`, `Guid`, `RolConfiguration`, `Usuario`, `RegistroAuditoria`, `List`, `HttpClient`, `IDirectorioDeUsuarios.ListarActivosConPermisoAsync`, `EntityTypeBuilder`, `RecibirEquipoHandler`?**
-  _High betweenness centrality (0.019) - this node is a cross-community bridge._
+- **Why does `RegistroAuditoria` connect `RegistroAuditoria` to `OrdenRepoEnMemoria`, `RecibirEquipoHandlerTests`, `RecibirEquipoHandler.HandleAsync`, `DateTimeOffset`, `Guid`, `List`, `PuntoIosDbContext`, `PagedResult`?**
+  _High betweenness centrality (0.027) - this node is a cross-community bridge._
 - **Should `3. Fases` be split into smaller, more focused modules?**
   _Cohesion score 0.09523809523809523 - nodes in this community are weakly interconnected._
